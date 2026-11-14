@@ -24,7 +24,14 @@
 ## CHƯA kiểm chứng (đừng đoán)
 - Tham số `timeout` của `getUpdates` (client hiện KHÔNG gửi, chỉ đặt timeout HTTP phía mình).
 - Giới hạn độ dài `caption` của `sendPhoto`; URL ảnh Zalo (`photo_url`) có hết hạn không.
-- Hành vi trong nhóm (`can_join_groups=true` nhưng chưa thử): `parse_update` bỏ qua `chat_type` khác `PRIVATE`.
+- Nhóm — ĐÃ KIỂM CHỨNG một phần (2026-11-14, nhóm thử, mẫu `samples/update_group_photo_mention.json`):
+  - Thêm bot vào nhóm phải bấm link xác nhận `bot.zaloplatforms.com`; KHÔNG có sự kiện "bot vào nhóm" qua getUpdates.
+  - Tin KHÔNG @nhắc bot (ảnh + chữ, chữ thường): bot KHÔNG nhận gì → bot không thể tự đọc/kiểm duyệt bài trong nhóm.
+  - Tin CÓ @nhắc: cùng dạng tin 1:1, khác `chat.chat_type="GROUP"`, `chat.id` dạng `zgr-…` (≠ `from.id`);
+    `from.id` trùng ID của người đó trong chat 1:1. Phần nhắc nằm NGUYÊN VĂN trong `text`/`caption`
+    ("@Bot CHỢ CƯ DÂN AI ..."), không có trường entities/offset → phải tự cắt theo tên bot.
+  - Chưa thử: tin chữ có @nhắc (chắc cùng dạng `message.text.received`), `sendMessage` vào `zgr-…`,
+    nhóm "chỉ trưởng/phó nhóm gửi tin". `parse_update` hiện vẫn bỏ qua GROUP.
 - Giới hạn tốc độ; loại tin khác (sticker, file): `parse_update` trả `None`.
 - Xoá/thu hồi tin nhắn: giả định KHÔNG làm được. Tin bị gỡ → DB đổi trạng thái và bot trả lời "Tin #N đã được gỡ".
 - Nhắn riêng cho người chưa từng chat với bot: coi là không được.
