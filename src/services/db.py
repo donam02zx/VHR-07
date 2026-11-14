@@ -135,11 +135,16 @@ def init_db() -> None:
     logger.info("init_db xong: %s", path)
 
 
-def reset_for_tests(path: str | Path) -> None:
-    """Trỏ module sang DB tạm và tạo schema — chỉ dùng trong test."""
+def use_db(path: str | Path) -> None:
+    """Trỏ module sang file DB khác và tạo schema (script seed/simulate, test)."""
     global _db_path_override
     _db_path_override = str(path)
     init_db()
+
+
+def reset_for_tests(path: str | Path) -> None:
+    """Trỏ module sang DB tạm và tạo schema — chỉ dùng trong test."""
+    use_db(path)
 
 
 def _row(row: sqlite3.Row | None) -> dict[str, Any] | None:
@@ -157,6 +162,18 @@ def upsert_user(zalo_user_id: str, display_name: str | None = None) -> int:
         )
         row = conn.execute("SELECT id FROM users WHERE zalo_user_id=?", (zalo_user_id,)).fetchone()
     return int(row["id"])
+
+
+USER_ROLES = frozenset({"resident", "moderator"})
+
+
+def set_role(zalo_user_id: str, role: str) -> None:
+    """Đặt vai trò (07: moderator cho /duyet, /tuchoi). Người dùng chưa có → tạo."""
+    if role not in USER_ROLES:
+        raise ValueError(f"role không hợp lệ: {role}")
+    upsert_user(zalo_user_id)
+    with connect() as conn:
+        conn.execute("UPDATE users SET role=? WHERE zalo_user_id=?", (role, zalo_user_id))
 
 
 def get_user(user_id: int) -> dict[str, Any] | None:

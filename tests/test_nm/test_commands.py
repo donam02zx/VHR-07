@@ -77,7 +77,7 @@ async def test_tim_without_accents_finds_accented_listing() -> None:
     lid = make_listing("Xe đạp thể thao đã qua sử dụng")
     make_listing("Nồi cơm điện")
     out = await run("/tim xe dap")
-    assert out == [f"Tìm thấy 1 tin:\n#{lid} Xe đạp thể thao đã qua sử dụng — 1.200.000 đ"]
+    assert out == [f'Tìm thấy 1 tin:\n#{lid} Xe đạp thể thao đã qua sử dụng — 1.200.000 đ\nNhắn "/xem {lid}" để xem chi tiết.']
 
 
 async def test_search_only_published_and_ranked() -> None:
@@ -108,6 +108,21 @@ async def test_search_no_result_and_empty_query() -> None:
     make_listing("Nồi cơm")
     assert await run("/tim tủ lạnh") == [search.MSG_NO_RESULT]
     assert (await run("/tim"))[0].startswith("Gõ /tim")
+
+
+# ---------------------------------------------------------------- /xem
+async def test_xem_published_masks_phone_hides_seller() -> None:
+    lid = make_listing("Xe đạp", description="Gọi 0912 345 678 buổi tối")
+    out = (await run(f"/xem {lid}"))[0]
+    assert out.startswith(f"Tin #{lid}: Xe đạp")
+    assert "09xx xxx 678" in out and "0912 345 678" not in out
+    assert "Tên Thật" not in out and OWNER not in out
+
+
+async def test_xem_not_published_or_bad_id() -> None:
+    lid = make_listing("Nháp", status="awaiting_confirm")
+    assert await run(f"/xem {lid}") == [f"Không tìm thấy tin #{lid} đang đăng."]
+    assert (await run("/xem"))[0].startswith("Gõ /xem")
 
 
 # ---------------------------------------------------------------- /rut
@@ -177,9 +192,7 @@ async def test_tincuatoi() -> None:
 
 # ---------------------------------------------------------------- moderator
 def make_mod() -> None:
-    db.upsert_user(MOD, "Mod")
-    with db.connect() as conn:
-        conn.execute("UPDATE users SET role='moderator' WHERE zalo_user_id=?", (MOD,))
+    db.set_role(MOD, "moderator")
 
 
 async def test_duyet_requires_moderator() -> None:

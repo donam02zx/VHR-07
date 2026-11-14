@@ -44,7 +44,7 @@ Giữ nguyên số thứ tự. Mỗi lượt chỉ làm MỘT task rồi báo c�
   Làm: `services/commands.py`, `services/search.py`; nối vào dispatcher.
   Xong khi: test `/tim xe dap` (không dấu) ra tin "Xe đạp...", `/rut` sai chủ bị từ chối, SĐT trong kết quả đã che.
 
-- [ ] **T11 — Dữ liệu mẫu và chạy thử toàn tuyến** — Đọc: 11
+- [x] **T11 — Dữ liệu mẫu và chạy thử toàn tuyến** — Đọc: 11
   Làm: `scripts/seed.py` (8–10 tin đã đăng), script `scripts/simulate.py` chạy kịch bản demo ở chế độ sim, in từng bước.
   Xong khi: chạy `simulate.py` ra đúng 4 cảnh trong 11.
 
@@ -61,4 +61,4 @@ Giữ nguyên số thứ tự. Mỗi lượt chỉ làm MỘT task rồi báo c�
 - T05: đã có mẫu text/photo thật (getMe.json chưa lưu, dạng getMe đã ghi ở 05). Còn chưa kiểm chứng: timeout getUpdates, sendPhoto (đang NotImplementedError), nhóm (parse_update bỏ qua chat_type khác PRIVATE).
 - T07: giá bất thường (≤0, >1 tỷ, thiếu giá) mình xếp vào nhóm "đưa người duyệt" (điểm tối thiểu 0.3) chứ không từ chối ngay — 07 không nói rõ. Đúng ý?
 - T08: `needs_fix` mở lại tin ngay (về awaiting_confirm, hội thoại chờ sửa/ok); nếu người bán đang có bản nháp khác thì bản đó bị huỷ. Chấp nhận cho demo?
-- T10: chưa làm `/xem <id>` (08 ghi tuỳ chọn) và Giai đoạn 2 `search_semantic` (chờ AI thật). Kết quả /tim vẫn in dòng gợi ý "/xem"? — hiện KHÔNG in để khỏi trỏ tới lệnh chưa có.
+- T10/T11: `/xem <id>` đã làm ở T11 (cảnh 4 cần thấy SĐT trong mô tả bị che). Giai đoạn 2 `search_semantic` chưa làm (chờ AI thật).

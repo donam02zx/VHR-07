@@ -6,7 +6,7 @@ import logging
 
 from src.channels.zalo import Inbound
 from src.config import get_settings
-from src.services import db, reviewflow, search
+from src.services import db, posting, reviewflow, search
 from src.services.posting import Reply
 from src.services.text import normalize_text
 
@@ -16,6 +16,7 @@ HELP = (
     "Cách dùng NeighborMarket:\n"
     "- Gửi ảnh món đồ (kèm mô tả, giá nếu có) để đăng tin.\n"
     "- /tim <từ khoá>: tìm tin đã đăng.\n"
+    "- /xem <mã tin>: xem chi tiết một tin.\n"
     "- /tincuatoi: xem tin của bạn.\n"
     "- /rut <mã tin>: rút tin của bạn."
 )
@@ -59,6 +60,8 @@ async def handle(inbound: Inbound) -> list[Reply]:
         if not args:
             return [Reply(chat, "Gõ /tim <từ khoá>, ví dụ: /tim xe dap")]
         return [Reply(chat, search.format_results(search.search(args)))]
+    if name == "/xem":
+        return [Reply(chat, _view(args))]
     if name == "/tincuatoi":
         return [Reply(chat, _my_listings(user_id))]
     if name == "/rut":
@@ -66,6 +69,17 @@ async def handle(inbound: Inbound) -> list[Reply]:
     if name in ("/duyet", "/tuchoi"):
         return _moderate(inbound, name, args)
     return [Reply(chat, HELP_SHORT)]
+
+
+def _view(args: str) -> str:
+    """Chi tiết tin đang đăng — dùng đúng bản công khai (đã che SĐT, không lộ người bán)."""
+    lid = _parse_id(args)
+    if lid is None:
+        return "Gõ /xem <mã tin>, ví dụ: /xem 23"
+    listing = db.get_listing(lid)
+    if listing is None or listing["status"] != "published":
+        return f"Không tìm thấy tin #{lid} đang đăng."
+    return posting.public_text(listing)
 
 
 def _my_listings(user_id: int) -> str:

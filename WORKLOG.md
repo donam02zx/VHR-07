@@ -42,4 +42,5 @@
 | Claude Code | NM T08 — API duyệt (token, 401/404/409), /console, nhắn người bán sau duyệt | ✅ Done | src/api/reviews.py, src/static/console.html, src/main.py, tests/test_nm/test_reviews_api.py (16 test) | 0.7h |
 | Claude Code | NM T09 — poller getUpdates (chống trùng, backoff, handler lỗi không dừng) + nối lifespan | ✅ Done | src/channels/poller.py, src/main.py, tests/test_nm/test_poller.py (12 test) | 0.4h |
 | Claude Code | NM T10 — /help /tim /tincuatoi /rut /duyet /tuchoi + search bỏ dấu; tách reviewflow dùng chung | ✅ Done | src/services/{commands,search,reviewflow}.py, tests/test_nm/test_commands.py (24 test) | 0.7h |
+| Claude Code | NM T11 — seed.py (10 tin, --moderator) + simulate.py (4 cảnh demo, sim) + /xem | ✅ Done | scripts/{seed,simulate}.py, tests/test_nm/test_simulate.py; simulate.py: TẤT CẢ 4 CẢNH ĐÚNG | 0.8h |
 

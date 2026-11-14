@@ -45,4 +45,5 @@ def format_results(rows: list[dict[str, Any]]) -> str:
     for r in rows:
         price = format_vnd(r["price_vnd"]) if r.get("price_vnd") else "thương lượng"
         lines.append(f"#{r['id']} {mask_phone(r['title'] or '')} — {price}")
+    lines.append(f'Nhắn "/xem {rows[0]["id"]}" để xem chi tiết.')
     return "\n".join(lines)
