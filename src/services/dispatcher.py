@@ -29,12 +29,46 @@ async def route(inbound: Inbound, client: ZaloClient) -> list[Reply]:
     return await posting.handle_text(inbound)
 
 
-async def handle(inbound: Inbound, client: ZaloClient) -> list[Reply]:
-    """Xử lý một tin đến và gửi trả lời. Lỗi gửi một Reply được log, không chặn Reply khác."""
-    replies = await route(inbound, client)
+async def send_reply(client: ZaloClient, reply: Reply) -> None:
+    if reply.photo:
+        await client.send_photo(reply.chat_id, reply.photo, reply.text)
+    else:
+        await client.send_text(reply.chat_id, reply.text)
+
+
+async def deliver(client: ZaloClient, replies: list[Reply], origin_chat: str | None, ref: str) -> bool:
+    """Gửi lần lượt; lỗi một tin chỉ log, không chặn tin khác. Trả True nếu tất cả gửi được.
+
+    notify_ok / notify_fail của Reply được gửi về `origin_chat` (người ra lệnh).
+    """
+    all_ok = True
     for reply in replies:
         try:
-            await client.send_text(reply.chat_id, reply.text)
+            await send_reply(client, reply)
+            ok = True
         except Exception as exc:
-            logger.error("gửi tin lỗi event=%s chat=%s: %s", inbound.event_key, reply.chat_id, type(exc).__name__)
+            ok = all_ok = False
+            logger.error("gửi tin lỗi ref=%s chat=%s: %s", ref, reply.chat_id, type(exc).__name__)
+        notice = reply.notify_ok if ok else reply.notify_fail
+        if notice and origin_chat:
+            try:
+                await client.send_text(origin_chat, notice)
+            except Exception as exc:
+                all_ok = False
+                logger.error("gửi thông báo lỗi ref=%s chat=%s: %s", ref, origin_chat, type(exc).__name__)
+    return all_ok
+
+
+async def handle(inbound: Inbound, client: ZaloClient) -> list[Reply]:
+    """Xử lý một tin đến và gửi trả lời."""
+    kind = classify(inbound)
+    # Không log nội dung tin (09) — chỉ loại, tên lệnh, có ảnh, độ dài chữ.
+    command = inbound.text.split(maxsplit=1)[0][:20] if kind == "command" and inbound.text.strip() else "-"
+    logger.info(
+        "in event=%s kind=%s cmd=%s has_image=%s text_len=%d",
+        inbound.event_key, kind, command, bool(inbound.image_ref), len(inbound.text),
+    )
+    replies = await route(inbound, client)
+    await deliver(client, replies, inbound.chat_id, inbound.event_key)
+    logger.info("out event=%s replies=%d", inbound.event_key, len(replies))
     return replies

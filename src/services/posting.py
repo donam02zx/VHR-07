@@ -44,8 +44,18 @@ _CAPTION_PRICE = re.compile(
 
 @dataclass(frozen=True)
 class Reply:
+    """Một tin bot gửi đi.
+
+    photo: URL ảnh → gửi bằng sendPhoto, `text` là chú thích (ngắn).
+    notify_ok / notify_fail: báo lại cho người gửi lệnh tuỳ việc gửi tin này thành công hay không
+    (vd chuyển câu hỏi tới người bán) — để không báo "đã gửi" khi thực ra gửi lỗi.
+    """
+
     chat_id: str
     text: str
+    photo: str | None = None
+    notify_ok: str | None = None
+    notify_fail: str | None = None
 
 
 def format_vnd(n: int) -> str:
@@ -84,7 +94,7 @@ def public_text(listing: dict[str, Any]) -> str:
     ]
     if listing.get("description"):
         lines.append(mask_phone(listing["description"]))
-    lines.append(f"Liên hệ qua bot NeighborMarket, mã tin #{listing['id']}.")
+    lines.append(f"Hỏi người bán (ẩn danh qua bot): /hoi {listing['id']} <câu hỏi>")
     return "\n".join(lines)
 
 

@@ -86,6 +86,14 @@ CREATE TABLE IF NOT EXISTS review_queue(
   created_at TEXT NOT NULL, decided_at TEXT
 );
 CREATE TABLE IF NOT EXISTS processed_events(event_key TEXT PRIMARY KEY, created_at TEXT NOT NULL);
+-- Chuyển tin ẩn danh người mua <-> người bán qua bot (/hoi, /tl). Mỗi người mua một luồng mỗi tin.
+CREATE TABLE IF NOT EXISTS relay_threads(
+  id INTEGER PRIMARY KEY,
+  listing_id INTEGER NOT NULL REFERENCES listings(id),
+  buyer_id INTEGER NOT NULL REFERENCES users(id),
+  created_at TEXT NOT NULL, last_at TEXT NOT NULL,
+  UNIQUE(listing_id, buyer_id)
+);
 CREATE TABLE IF NOT EXISTS audit_log(
   id INTEGER PRIMARY KEY, listing_id INTEGER, action TEXT, detail TEXT, created_at TEXT NOT NULL
 );
@@ -402,3 +410,37 @@ def pending_review_for_listing(listing_id: int) -> dict[str, Any] | None:
                 (listing_id,),
             ).fetchone()
         )
+
+
+# ---------------------------------------------------------------- chuyển tin /hoi /tl
+def get_or_create_thread(listing_id: int, buyer_id: int) -> dict[str, Any]:
+    """Luồng hỏi đáp của một người mua với một tin; tạo nếu chưa có, cập nhật last_at."""
+    ts = now_iso()
+    with connect() as conn:
+        conn.execute(
+            "INSERT INTO relay_threads(listing_id, buyer_id, created_at, last_at) VALUES(?,?,?,?) "
+            "ON CONFLICT(listing_id, buyer_id) DO UPDATE SET last_at=excluded.last_at",
+            (listing_id, buyer_id, ts, ts),
+        )
+        row = conn.execute(
+            "SELECT * FROM relay_threads WHERE listing_id=? AND buyer_id=?", (listing_id, buyer_id)
+        ).fetchone()
+    return dict(row)
+
+
+def get_thread(thread_id: int) -> dict[str, Any] | None:
+    """Luồng kèm người bán (qua listing) và zalo id người mua."""
+    with connect() as conn:
+        return _row(
+            conn.execute(
+                "SELECT t.*, l.seller_id, l.title, ub.zalo_user_id AS buyer_zalo_id "
+                "FROM relay_threads t JOIN listings l ON l.id=t.listing_id JOIN users ub ON ub.id=t.buyer_id "
+                "WHERE t.id=?",
+                (thread_id,),
+            ).fetchone()
+        )
+
+
+def touch_thread(thread_id: int) -> None:
+    with connect() as conn:
+        conn.execute("UPDATE relay_threads SET last_at=? WHERE id=?", (now_iso(), thread_id))

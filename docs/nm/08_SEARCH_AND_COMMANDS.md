@@ -8,6 +8,14 @@
 | `/tincuatoi` | liệt kê tin của chính mình kèm trạng thái |
 | `/rut <id>` | rút tin của mình (kiểm tra đúng chủ) → `withdrawn` |
 | `/duyet <id>`, `/tuchoi <id> <lý do>` | chỉ moderator (dự phòng, xem 07) |
+| `/xem <id>` | ảnh (nếu có, `sendPhoto`) + bản công khai đã che SĐT |
+| `/hoi <id> <câu hỏi>` | người mua hỏi người bán qua bot; bot gửi người bán "Có người hỏi tin #id — mã hỏi N" |
+| `/tl <mã hỏi> <trả lời>` | chỉ người bán của tin; bot chuyển về đúng người mua của luồng đó |
+
+### Chuyển tin ẩn danh (`/hoi` – `/tl`)
+Cả hai bên chỉ thấy bot: không có tên thật, Zalo ID hay SĐT (nội dung chuyển đi qua `mask_phone`).
+DB chỉ lưu luồng (`relay_threads`), không lưu nội dung. Người mua chỉ thấy "đã chuyển" khi gửi tới người bán thành công;
+người bán chưa từng nhắn bot thì Zalo không gửi được (05) → người mua được báo "chưa gửi được".
 Lệnh lạ → trả `/help` ngắn. Người dùng chưa có trong `users` → tạo tự động (role resident).
 
 ## Tìm kiếm (`services/search.py`)

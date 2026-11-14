@@ -243,10 +243,23 @@ async def test_retry_network_error_gives_up_after_two_retries(caplog: pytest.Log
     assert "secret-token" not in str(exc.value)
 
 
-async def test_send_photo_not_implemented_in_zalo_mode() -> None:
-    client = zalo_client(lambda req: httpx.Response(500))
-    with pytest.raises(NotImplementedError):
-        await client.send_photo("c1", "x")
+async def test_send_photo_body_matches_verified_sample() -> None:
+    sample_body = sample("sendPhoto.json")
+    bodies: list[dict[str, Any]] = []
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        assert req.url.path == f"/bot{TOKEN}/sendPhoto"
+        bodies.append(json.loads(req.content))
+        return httpx.Response(200, json={k: v for k, v in sample_body.items() if not k.startswith("_")})
+
+    client = zalo_client(handler)
+    await client.send_photo("c1", "https://photo/x.jpg", "Tin #13")
+    await client.send_photo("c1", "https://photo/y.jpg")
+    assert set(bodies[0]) == set(sample_body["_request_body"]) == {"chat_id", "photo", "caption"}
+    assert bodies[0] == {"chat_id": "c1", "photo": "https://photo/x.jpg", "caption": "Tin #13"}
+    assert bodies[1] == {"chat_id": "c1", "photo": "https://photo/y.jpg"}
+    with pytest.raises(ValueError):
+        await client.send_photo("c1", "")
 
 
 async def test_download_image_get() -> None:

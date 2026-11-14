@@ -7,6 +7,7 @@ import logging
 from src.channels.zalo import Inbound
 from src.config import get_settings
 from src.services import db, posting, reviewflow, search
+from src.services.pii import mask_phone
 from src.services.posting import Reply
 from src.services.text import normalize_text
 
@@ -17,6 +18,8 @@ HELP = (
     "- Gửi ảnh món đồ (kèm mô tả, giá nếu có) để đăng tin.\n"
     "- /tim <từ khoá>: tìm tin đã đăng.\n"
     "- /xem <mã tin>: xem chi tiết một tin.\n"
+    "- /hoi <mã tin> <câu hỏi>: hỏi người bán (ẩn danh qua bot).\n"
+    "- /tl <mã hỏi> <trả lời>: người bán trả lời người hỏi.\n"
     "- /tincuatoi: xem tin của bạn.\n"
     "- /rut <mã tin>: rút tin của bạn."
 )
@@ -32,6 +35,7 @@ STATUS_VI = {
     "withdrawn": "đã rút",
 }
 WITHDRAWABLE = ("published", "awaiting_confirm")
+RELAY_MAX = 500  # ký tự mỗi tin chuyển
 MODERATOR = "moderator"
 
 
@@ -61,7 +65,11 @@ async def handle(inbound: Inbound) -> list[Reply]:
             return [Reply(chat, "Gõ /tim <từ khoá>, ví dụ: /tim xe dap")]
         return [Reply(chat, search.format_results(search.search(args)))]
     if name == "/xem":
-        return [Reply(chat, _view(args))]
+        return _view(chat, args)
+    if name == "/hoi":
+        return _ask(chat, user_id, args)
+    if name == "/tl":
+        return _answer(chat, user_id, args)
     if name == "/tincuatoi":
         return [Reply(chat, _my_listings(user_id))]
     if name == "/rut":
@@ -71,15 +79,89 @@ async def handle(inbound: Inbound) -> list[Reply]:
     return [Reply(chat, HELP_SHORT)]
 
 
-def _view(args: str) -> str:
-    """Chi tiết tin đang đăng — dùng đúng bản công khai (đã che SĐT, không lộ người bán)."""
+def _published(lid: int) -> dict | None:
+    listing = db.get_listing(lid)
+    return listing if listing is not None and listing["status"] == "published" else None
+
+
+def _view(chat: str, args: str) -> list[Reply]:
+    """Chi tiết tin đang đăng: ảnh (nếu là URL) + bản công khai (che SĐT, không lộ người bán)."""
     lid = _parse_id(args)
     if lid is None:
-        return "Gõ /xem <mã tin>, ví dụ: /xem 23"
-    listing = db.get_listing(lid)
-    if listing is None or listing["status"] != "published":
-        return f"Không tìm thấy tin #{lid} đang đăng."
-    return posting.public_text(listing)
+        return [Reply(chat, "Gõ /xem <mã tin>, ví dụ: /xem 23")]
+    listing = _published(lid)
+    if listing is None:
+        return [Reply(chat, f"Không tìm thấy tin #{lid} đang đăng.")]
+    replies = []
+    image = listing.get("image_ref") or ""
+    if image.startswith(("http://", "https://")):
+        replies.append(Reply(chat, f"Tin #{lid}", photo=image))
+    replies.append(Reply(chat, posting.public_text(listing)))
+    return replies
+
+
+def _split_id_text(args: str) -> tuple[int | None, str]:
+    id_raw, _, text = args.partition(" ")
+    return _parse_id(id_raw), text.strip()
+
+
+def _ask(chat: str, buyer_id: int, args: str) -> list[Reply]:
+    """Người mua hỏi người bán qua bot — không bên nào thấy SĐT/tên/ID của bên kia."""
+    lid, question = _split_id_text(args)
+    if lid is None or not question:
+        return [Reply(chat, "Gõ /hoi <mã tin> <câu hỏi>, ví dụ: /hoi 13 còn không bạn?")]
+    if len(question) > RELAY_MAX:
+        return [Reply(chat, f"Câu hỏi tối đa {RELAY_MAX} ký tự.")]
+    listing = _published(lid)
+    if listing is None:
+        return [Reply(chat, f"Không tìm thấy tin #{lid} đang đăng.")]
+    if listing["seller_id"] == buyer_id:
+        return [Reply(chat, f"Tin #{lid} là tin của bạn.")]
+    tid = db.get_or_create_thread(lid, buyer_id)["id"]
+    db.add_audit(lid, "relay_ask", f"thread={tid}")  # không lưu nội dung (09)
+    to_seller = (
+        f"Có người hỏi tin #{lid} ({listing['title']}) — mã hỏi {tid}:\n"
+        f"{mask_phone(question)}\n"
+        f"Trả lời: /tl {tid} <nội dung>"
+    )
+    return [
+        Reply(
+            reviewflow.seller_chat_id(listing),
+            to_seller,
+            notify_ok=f"Đã chuyển câu hỏi tới người bán tin #{lid}. Bot sẽ báo khi có trả lời.",
+            notify_fail=f"Chưa gửi được câu hỏi tới người bán tin #{lid}. Bạn thử lại sau nhé.",
+        )
+    ]
+
+
+def _answer(chat: str, seller_id: int, args: str) -> list[Reply]:
+    """Người bán trả lời một luồng hỏi; chỉ đúng người bán của tin mới trả lời được."""
+    tid, answer = _split_id_text(args)
+    if tid is None or not answer:
+        return [Reply(chat, "Gõ /tl <mã hỏi> <trả lời>, ví dụ: /tl 5 còn bạn nhé")]
+    if len(answer) > RELAY_MAX:
+        return [Reply(chat, f"Trả lời tối đa {RELAY_MAX} ký tự.")]
+    thread = db.get_thread(tid)
+    if thread is None or thread["seller_id"] != seller_id:
+        if thread is not None:
+            logger.warning("trả lời sai chủ thread=%s", tid)
+        return [Reply(chat, f"Không tìm thấy mã hỏi {tid} cho tin của bạn.")]
+    db.touch_thread(tid)
+    lid = thread["listing_id"]
+    db.add_audit(lid, "relay_answer", f"thread={tid}")
+    to_buyer = (
+        f"Người bán tin #{lid} ({thread['title']}) trả lời:\n"
+        f"{mask_phone(answer)}\n"
+        f"Hỏi tiếp: /hoi {lid} <câu hỏi>"
+    )
+    return [
+        Reply(
+            thread["buyer_zalo_id"],
+            to_buyer,
+            notify_ok=f"Đã chuyển trả lời (mã hỏi {tid}).",
+            notify_fail=f"Chưa gửi được trả lời (mã hỏi {tid}). Bạn thử lại sau nhé.",
+        )
+    ]
 
 
 def _my_listings(user_id: int) -> str:

@@ -230,11 +230,16 @@ class ZaloClient:
             self._check_ok("sendMessage", await self._call("sendMessage", {"chat_id": chat_id, "text": chunk}))
 
     async def send_photo(self, chat_id: str, photo: str, caption: str = "") -> None:
+        """Gửi ảnh theo URL. Body đã kiểm chứng 2026-11-14: {chat_id, photo, caption} (05)."""
+        if not photo:
+            raise ValueError("send_photo cần URL ảnh")
         if self.mode == "sim":
             self.sent.append(Sent("photo", chat_id, caption, photo))
             return
-        # Chưa có mẫu sendPhoto thật (05) — không đoán tên trường.
-        raise NotImplementedError("sendPhoto chưa kiểm chứng với Zalo thật")
+        body = {"chat_id": chat_id, "photo": photo}
+        if caption:
+            body["caption"] = caption[:MAX_TEXT]
+        self._check_ok("sendPhoto", await self._call("sendPhoto", body))
 
     async def download_image(self, image_ref: str) -> bytes:
         """Ảnh đến: photo_url tải thẳng bằng GET. Sim: chỉ đọc file cục bộ, không gọi mạng."""

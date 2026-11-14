@@ -52,13 +52,17 @@ Giữ nguyên số thứ tự. Mỗi lượt chỉ làm MỘT task rồi báo c�
   Làm (người dùng cầm token): đặt `CHANNEL_MODE=zalo`, chạy, thử từng cảnh bằng điện thoại. Ghi lỗi/khác biệt vào "Câu hỏi mở" và sửa client.
   Xong khi: chạy trọn kịch bản trên Zalo thật 2 lần liên tiếp.
 
+- [x] **T12a — Chuyển tin ẩn danh + /xem kèm ảnh (người dùng yêu cầu khi thử T12)** — Đọc: 08, 05
+  Làm: `/hoi <id> <câu hỏi>` → bot nhắn người bán kèm mã hỏi; `/tl <mã hỏi> <trả lời>` → bot chuyển về người mua. `/xem` gửi ảnh bằng `sendPhoto` (đã kiểm chứng). Log mỗi tin đến (không log nội dung). Bỏ dòng "Liên hệ qua bot..." trong bản công khai.
+  Xong khi: test hỏi–đáp hai chiều ẩn danh, sai chủ bị từ chối, người bán không nhận được → người mua được báo; `/xem` gửi ảnh trước chữ.
+
 - [ ] **T13 — Dọn và tài liệu** — Đọc: 09
   Làm: cập nhật `PROJECT_CONTEXT.md`, `README.md` (cách chạy), `docs/architecture_diagram.md` (sơ đồ ở 02), `WORKLOG.md`. `make lint` và `pytest` xanh.
 
 ## Câu hỏi mở (ghi vào đây, đừng tự đoán)
 - Repo: https://github.com/donam02zx/VHR-07
 - T03: `parse_vnd("800")` (số trần < 1000, không đơn vị) trả None để bot hỏi lại — đúng ý? `mask_phone` chỉ che di động (03/05/07/08/09), chưa che máy bàn 02x.
-- T05: đã có mẫu text/photo thật (getMe.json chưa lưu, dạng getMe đã ghi ở 05). Còn chưa kiểm chứng: timeout getUpdates, sendPhoto (đang NotImplementedError), nhóm (parse_update bỏ qua chat_type khác PRIVATE).
+- T05: đã có mẫu text/photo thật (getMe.json chưa lưu, dạng getMe đã ghi ở 05). Còn chưa kiểm chứng: timeout getUpdates, nhóm (parse_update bỏ qua chat_type khác PRIVATE).
 - T07: giá bất thường (≤0, >1 tỷ, thiếu giá) mình xếp vào nhóm "đưa người duyệt" (điểm tối thiểu 0.3) chứ không từ chối ngay — 07 không nói rõ. Đúng ý?
 - T08: `needs_fix` mở lại tin ngay (về awaiting_confirm, hội thoại chờ sửa/ok); nếu người bán đang có bản nháp khác thì bản đó bị huỷ. Chấp nhận cho demo?
 - T10/T11: `/xem <id>` đã làm ở T11 (cảnh 4 cần thấy SĐT trong mô tả bị che). Giai đoạn 2 `search_semantic` chưa làm (chờ AI thật).

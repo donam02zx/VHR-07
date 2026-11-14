@@ -45,6 +45,14 @@ review_queue(
 processed_events(event_key TEXT PRIMARY KEY, created_at TEXT NOT NULL);  -- chống xử lý trùng
 
 audit_log(id INTEGER PRIMARY KEY, listing_id INTEGER, action TEXT, detail TEXT, created_at TEXT NOT NULL);
+
+relay_threads(                                 -- chuyển tin ẩn danh /hoi – /tl (08)
+  id INTEGER PRIMARY KEY,                      -- "mã hỏi" người bán dùng với /tl
+  listing_id INTEGER NOT NULL REFERENCES listings(id),
+  buyer_id INTEGER NOT NULL REFERENCES users(id),
+  created_at TEXT NOT NULL, last_at TEXT NOT NULL,
+  UNIQUE(listing_id, buyer_id)                 -- mỗi người mua một luồng mỗi tin; KHÔNG lưu nội dung tin nhắn
+);
 ```
 
 ## Trạng thái `listings.status` và chuyển hợp lệ

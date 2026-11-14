@@ -14,8 +14,7 @@ from pydantic import BaseModel, Field
 
 from src.channels.zalo import ZaloClient
 from src.config import get_settings
-from src.services import db, reviewflow
-from src.services.posting import Reply
+from src.services import db, dispatcher, reviewflow
 
 logger = logging.getLogger("nm.reviews")
 
@@ -70,16 +69,5 @@ async def decide(review_id: int, body: DecideRequest, channel: ZaloClient = Depe
     except db.InvalidTransitionError as exc:
         logger.warning("decide review=%s: %s", review_id, exc)
         raise HTTPException(409, "Tin không còn ở trạng thái chờ duyệt") from None
-    notified = await _send_all(channel, replies, review_id)
+    notified = await dispatcher.deliver(channel, replies, None, f"review={review_id}")
     return DecideResponse(review_id=review_id, listing_id=listing_id, listing_status=status, notified=notified)
-
-
-async def _send_all(channel: ZaloClient, replies: list[Reply], review_id: int) -> bool:
-    ok = True
-    for reply in replies:
-        try:
-            await channel.send_text(reply.chat_id, reply.text)
-        except Exception as exc:
-            ok = False
-            logger.error("nhắn sau duyệt lỗi review=%s chat=%s: %s", review_id, reply.chat_id, type(exc).__name__)
-    return ok

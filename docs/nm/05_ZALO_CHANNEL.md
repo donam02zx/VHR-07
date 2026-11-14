@@ -10,7 +10,8 @@
 - Tin ảnh: `event_name="message.image.received"`, `message.message_type="CHAT_PHOTO"`, `message.photo_url` (tải thẳng bằng GET, không cần đăng nhập), `message.caption` (có thể vắng).
 - Chung: `message.chat.id`, `message.chat.chat_type` (`"PRIVATE"`), `message.message_id` (duy nhất → `event_key`), `message.date` (mili giây), `message.from.id/display_name/is_bot`. Chat 1:1: `chat.id == from.id`.
 - `sendMessage`: body JSON `{"chat_id": "...", "text": "..."}` → `{"ok":true,"result":{message_id,date,message_type}}`. Thiếu `chat_id` → 400 `"The chat_id must not be empty"`.
-- Mẫu thật: `docs/nm/samples/update_text.json`, `update_photo.json`.
+- `sendPhoto` (kiểm chứng 2026-11-14, T12): body JSON `{"chat_id", "photo": <URL ảnh>, "caption"}` → `{"ok":true,"result":{message_id,date,message_type:"CHAT_PHOTO"}}`. `photo_url` của tin đến dùng lại được làm `photo`. Mẫu: `samples/sendPhoto.json`.
+- Mẫu thật: `docs/nm/samples/update_text.json`, `update_photo.json`, `sendPhoto.json`.
 
 ## Đã biết từ nguồn thứ ba (độ tin cậy khá)
 - Tạo bot tại bot.zaloplatforms.com. Token dạng `numeric_id:secret`; với bot Marketplace token dùng được có thể nằm trong tin nhắn chào của bot.
@@ -22,7 +23,7 @@
 
 ## CHƯA kiểm chứng (đừng đoán)
 - Tham số `timeout` của `getUpdates` (client hiện KHÔNG gửi, chỉ đặt timeout HTTP phía mình).
-- `sendPhoto` (client ném `NotImplementedError` ở chế độ `zalo` cho tới khi có mẫu).
+- Giới hạn độ dài `caption` của `sendPhoto`; URL ảnh Zalo (`photo_url`) có hết hạn không.
 - Hành vi trong nhóm (`can_join_groups=true` nhưng chưa thử): `parse_update` bỏ qua `chat_type` khác `PRIVATE`.
 - Giới hạn tốc độ; loại tin khác (sticker, file): `parse_update` trả `None`.
 - Xoá/thu hồi tin nhắn: giả định KHÔNG làm được. Tin bị gỡ → DB đổi trạng thái và bot trả lời "Tin #N đã được gỡ".
