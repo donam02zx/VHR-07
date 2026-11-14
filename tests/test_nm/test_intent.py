@@ -42,7 +42,9 @@ def test_detect_kind_and_query(text: str, kind: str, query: str) -> None:
 
 
 @pytest.mark.parametrize(("text", "lid"), [("xem tin 13", 13), ("tin 13", 13), ("#13", 13), ("xem 7", 7),
-                                          ("Xem tin số 5", 5)])
+                                          ("Xem tin số 5", 5), ("tôi muốn xem tin 13", 13),
+                                          ("cho mình xem tin số 5 với", 5), ("toi muon xem chi tiet tin 2", 2),
+                                          ("em xem #9 được không", 9)])
 def test_detect_view(text: str, lid: int) -> None:
     it = detect(text)
     assert (it.kind, it.listing_id) == ("view", lid)
@@ -51,11 +53,17 @@ def test_detect_view(text: str, lid: int) -> None:
 @pytest.mark.parametrize(
     ("text", "lid", "question"),
     [("hỏi 13 còn không bạn?", 13, "còn không bạn?"), ("hoi tin 5: giá có bớt không", 5, "giá có bớt không"),
-     ("Hỏi #2 xe còn không", 2, "xe còn không")],
+     ("Hỏi #2 xe còn không", 2, "xe còn không"),
+     ("cho tôi hỏi tin 13 còn không", 13, "còn không"), ("mình muốn hỏi tin số 4: bớt không", 4, "bớt không")],
 )
 def test_detect_ask(text: str, lid: int, question: str) -> None:
     it = detect(text)
     assert (it.kind, it.listing_id, it.query) == ("ask", lid, question)
+
+
+@pytest.mark.parametrize("text", ["tìm xe 13 inch", "xem xe đạp", "hỏi giá laptop", "tôi muốn hỏi giá tủ lạnh"])
+def test_numbers_or_ask_words_without_listing_id_are_not_view_or_ask(text: str) -> None:
+    assert detect(text).kind == "search"
 
 
 def test_detect_explicit_flag() -> None:

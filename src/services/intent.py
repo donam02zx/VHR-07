@@ -24,8 +24,9 @@ GREETINGS = {"xin chao", "chao", "chao ban", "chao bot", "hello", "hi", "hey", "
 THANKS = {"cam on", "cam on ban", "cam on nhe", "cam on nha", "thanks", "thank you", "tks", "thank"}
 HELP_RE = re.compile(r"\b(huong dan|giup|help|lam sao|lam the nao|cach dang|cach dung|dung the nao)\b")
 MY_RE = re.compile(r"\b(tin cua (toi|minh|em)|tin (toi|minh|em) (da )?dang|cac tin cua)\b")
-VIEW_RE = re.compile(r"^(?:xem\s+)?(?:tin\s+(?:so\s+)?|#)(\d+)$|^xem\s+(\d+)$")
-ASK_RE = re.compile(r"^\s*h[oỏ]i\s+(?:tin\s+)?#?(\d+)\s*[:,\-]?\s*(.+)$", re.IGNORECASE | re.DOTALL)
+# Khớp ở BẤT KỲ đâu trong câu ("tôi muốn xem tin 13", "cho mình hỏi tin 13 còn không").
+VIEW_RE = re.compile(r"\bxem\s+(?:chi tiet\s+)?(?:tin\s+)?(?:so\s+)?#?(\d+)\b|^(?:tin\s+(?:so\s+)?|#)(\d+)$")
+ASK_RE = re.compile(r"(?:^|\s)h[oỏ]i\s+(?:tin\s+)?(?:số\s+|so\s+)?#?(\d+)\s*[:,\-]?\s*(.+)$", re.IGNORECASE | re.DOTALL)
 BUYER_ASKS_SELLER_RE = re.compile(r"\b(có )?ai (đang )?bán\b|\bai ban\b")  # "có ai bán laptop không" = người MUA
 SELL_RE = re.compile(
     r"\b(muon ban|can ban|ban gap|thanh ly|pass lai|nhuong lai|dang tin|dang ban|can pass|muon dang)\b"
@@ -94,9 +95,9 @@ def detect(text: str) -> Intent:
         return Intent("greet")
     if norm.strip(" .!?") in THANKS:
         return Intent("thanks")
-    if m := ASK_RE.match(text.strip()):
+    if m := ASK_RE.search(text.strip()):
         return Intent("ask", query=m.group(2).strip(), listing_id=int(m.group(1)))
-    if m := VIEW_RE.match(norm):
+    if m := VIEW_RE.search(norm):
         return Intent("view", listing_id=int(m.group(1) or m.group(2)))
     if MY_RE.search(norm):
         return Intent("my_listings")
