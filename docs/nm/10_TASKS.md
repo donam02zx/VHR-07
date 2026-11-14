@@ -11,7 +11,7 @@ Giữ nguyên số thứ tự. Mỗi lượt chỉ làm MỘT task rồi báo c�
   Làm: `services/db.py` đủ bảng + `init_db()` + hàm: `upsert_user`, `create_listing`, `get_listing`, `set_status(from,to)`, `update_listing_fields`, conversation get/set, `try_mark_event(event_key)->bool`, `add_audit`, review queue (create/list/decide), `search_candidates`.
   Xong khi: test tạo tin, chuyển trạng thái hợp lệ OK / sai bị từ chối, `try_mark_event` lần 2 trả False.
 
-- [ ] **T03 — Tiện ích thuần** — Đọc: 06 (mục parse_vnd), 08 (mục che SĐT), 09
+- [x] **T03 — Tiện ích thuần** — Đọc: 06 (mục parse_vnd), 08 (mục che SĐT), 09
   Làm: `services/vnd.py` (`parse_vnd`), `services/pii.py` (`mask_phone`), hàm bỏ dấu tiếng Việt.
   Xong khi: test bảng ≥ 10 ví dụ mỗi hàm.
 
@@ -56,4 +56,5 @@ Giữ nguyên số thứ tự. Mỗi lượt chỉ làm MỘT task rồi báo c�
   Làm: cập nhật `PROJECT_CONTEXT.md`, `README.md` (cách chạy), `docs/architecture_diagram.md` (sơ đồ ở 02), `WORKLOG.md`. `make lint` và `pytest` xanh.
 
 ## Câu hỏi mở (ghi vào đây, đừng tự đoán)
-- (trống) — repo: https://github.com/donam02zx/VHR-07
+- Repo: https://github.com/donam02zx/VHR-07
+- T03: `parse_vnd("800")` (số trần < 1000, không đơn vị) trả None để bot hỏi lại — đúng ý? `mask_phone` chỉ che di động (03/05/07/08/09), chưa che máy bàn 02x.
