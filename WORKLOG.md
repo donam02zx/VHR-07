@@ -45,5 +45,5 @@
 | Claude Code | NM T11 — seed.py (10 tin, --moderator) + simulate.py (4 cảnh demo, sim) + /xem | ✅ Done | scripts/{seed,simulate}.py, tests/test_nm/test_simulate.py; simulate.py: TẤT CẢ 4 CẢNH ĐÚNG | 0.8h |
 | Claude Code | NM T12a — chuyển tin ẩn danh /hoi–/tl, /xem kèm ảnh (sendPhoto kiểm chứng thật), log tin đến | ✅ Done | src/services/{commands,dispatcher}.py, db relay_threads, tests/test_nm/test_relay.py (18 test) | 0.8h |
 | Claude Code | NM T12b — nhắn tự nhiên không cần "/" (tìm/bán/xem/hỏi; nháp: oke/thôi/giá 1tr2) | ✅ Done | src/services/intent.py, commands.handle_natural, tests/test_nm/test_intent.py (56 test) | 0.8h |
-| Claude Code | NM T12c — AI thật Gemini (4 hàm) + agent gọi công cụ (HITL, quay về luật) + săn tin + lọc giá | 🔄 WIP | src/services/{ai_gemini,agent,watches,nm_llm}.py, prompts/nm_*.md, tests test_agent + test_watches_and_gemini (44 test); chờ GOOGLE_API_KEY để thử thật | 1.5h |
+| Claude Code | NM T12c — AI thật Gemini (4 hàm) + agent gọi công cụ (HITL, quay về luật) + săn tin + lọc giá | ✅ Done | src/services/{ai_gemini,agent,watches,nm_llm}.py, prompts/nm_*.md, 45 test; thử thật với gemini-3.5-flash-lite: ảnh → tin đúng, agent tìm/hỏi/săn đúng | 2h |
 

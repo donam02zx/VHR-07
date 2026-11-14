@@ -39,7 +39,7 @@ PENDING_TTL_S = 600
 CONFIRM_SEND = {"gui", "gui di", "gui nhe", "ok", "oke", "ok gui", "dong y", "u", "uh", "yes", "co", "co gui"}
 CANCEL_SEND = {"thoi", "huy", "khong", "khong gui", "bo", "thoi khoi", "khoi"}
 
-llm_factory: Callable[[], Any] = lambda: get_nm_llm(fast=False, temperature=0.3)  # noqa: E731 — test thay
+llm_factory: Callable[[], Any] = lambda: get_nm_llm(fast=False)  # noqa: E731 — test thay
 
 _history: dict[str, deque[BaseMessage]] = {}
 _pending: dict[str, PendingAsk] = {}
@@ -167,8 +167,16 @@ def _text(msg: AIMessage) -> str:
     return "".join(p.get("text", "") if isinstance(p, dict) else str(p) for p in content)
 
 
+# Model đôi khi lỡ sinh vài chữ Ả Rập/Kirin/Hán/Thái giữa câu tiếng Việt (đã gặp khi thử thật).
+_FOREIGN_SCRIPT_RE = re.compile(
+    "[Ѐ-ӿ֐-ۿݐ-ݿ฀-๿぀-ヿ㐀-䶿一-鿿가-힯]+"
+)
+
+
 def _clean(text: str) -> str:
-    """Zalo không hiển thị markdown; che SĐT lần cuối; giới hạn độ dài."""
+    """Zalo không hiển thị markdown; bỏ chữ rác ngoài tiếng Việt; che SĐT lần cuối; giới hạn độ dài."""
+    text = _FOREIGN_SCRIPT_RE.sub("", text)
+    text = re.sub(r" {2,}", " ", text)
     text = re.sub(r"\*\*|__|`|^#+\s*", "", text, flags=re.MULTILINE)
     text = re.sub(r"^\s*\*\s+", "- ", text, flags=re.MULTILINE)
     return mask_phone(text.strip())[:REPLY_MAX]

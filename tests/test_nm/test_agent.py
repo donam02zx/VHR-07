@@ -218,3 +218,11 @@ async def test_draft_flow_not_routed_to_agent(client: ZaloClient, monkeypatch: p
     out = await say(client, "giá 1tr2")
     assert "Giá đăng: 1.200.000 đ" in out[0][1]
     assert fake.calls == []
+
+
+def test_clean_strips_foreign_script_glitch():
+    # Gặp khi thử Gemini thật: "#1 هەر Xe đạp trẻ em"
+    out = agent._clean("- #1 هەر Xe đạp trẻ em — 450.000 đ, gọi 0912345678")
+    assert "هەر" not in out
+    assert "#1 Xe đạp trẻ em — 450.000 đ" in out
+    assert "0912345678" not in out

@@ -55,8 +55,8 @@ class Settings(BaseSettings):
     google_api_key: str = ""
     nm_ai_mode: Literal["stub", "gemini"] = "stub"  # 4 hàm AI (04): soạn tin từ ảnh, giá, kiểm duyệt, tìm ngữ nghĩa
     nm_agent_enabled: bool = False  # agent LLM gọi công cụ cho câu tự nhiên; lỗi → luật từ khoá
-    nm_model: str = "gemini-2.5-flash"  # đọc ảnh + gọi công cụ
-    nm_model_fast: str = "gemini-2.5-flash-lite"  # kiểm duyệt, tìm ngữ nghĩa (rẻ, nhanh)
+    nm_model: str = "gemini-3.5-flash-lite"  # đọc ảnh + gọi công cụ (đo 2026-11-14: 1–10s; bản flash 16s+ hoặc quá giờ)
+    nm_model_fast: str = "gemini-3.5-flash-lite"  # kiểm duyệt, tìm ngữ nghĩa (rẻ, nhanh)
     nm_agent_max_steps: int = Field(default=5, ge=1, le=10)
 
     @model_validator(mode="after")

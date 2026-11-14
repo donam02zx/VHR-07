@@ -60,9 +60,9 @@ Giữ nguyên số thứ tự. Mỗi lượt chỉ làm MỘT task rồi báo c�
   Làm: `services/intent.py` (luật từ khoá): tìm / muốn bán / xem / hỏi / chào / cảm ơn; bản nháp hiểu "oke", "đăng đi", "thôi", "giá 1tr2", "1tr2", "đổi tên ...".
   Xong khi: test bảng ví dụ (có/không dấu, "bán/bạn/bàn"), đang nháp mà hỏi tìm thì vẫn giữ nháp + nhắc.
 
-- [ ] **T12c — Phần AI thật (Gemini) + agent + săn tin (người dùng giao, nhóm AI vắng)** — Đọc: 04, 08
+- [x] **T12c — Phần AI thật (Gemini) + agent + săn tin (người dùng giao, nhóm AI vắng)** — Đọc: 04, 08
   Làm: `ai_gemini.py` (4 hàm), `ai.py` chọn theo `NM_AI_MODE`, `agent.py` (công cụ + HITL + quay về luật), săn tin, lọc giá.
-  Xong khi: test với LLM giả xanh (đã xong); CHỜ `GOOGLE_API_KEY` để thử Gemini thật (chọn model, soạn tin từ ảnh, agent) rồi mới tick.
+  Xong khi: test với LLM giả xanh; thử Gemini thật (2026-11-14): model `gemini-3.5-flash-lite` (bản 2.5 báo 404 với tài khoản mới, bản flash 3.x chậm 16s+/503), soạn tin từ ảnh nhận đúng xe đạp Raptor dù chú thích chỉ "bán cái này", kiểm duyệt lừa đảo 0.6, agent tìm–hỏi (HITL "gửi")–săn tin đúng.
 
 - [ ] **T13 — Dọn và tài liệu** — Đọc: 09
   Làm: cập nhật `PROJECT_CONTEXT.md`, `README.md` (cách chạy), `docs/architecture_diagram.md` (sơ đồ ở 02), `WORKLOG.md`. `make lint` và `pytest` xanh.
@@ -74,3 +74,4 @@ Giữ nguyên số thứ tự. Mỗi lượt chỉ làm MỘT task rồi báo c�
 - T07: giá bất thường (≤0, >1 tỷ, thiếu giá) mình xếp vào nhóm "đưa người duyệt" (điểm tối thiểu 0.3) chứ không từ chối ngay — 07 không nói rõ. Đúng ý?
 - T08: `needs_fix` mở lại tin ngay (về awaiting_confirm, hội thoại chờ sửa/ok); nếu người bán đang có bản nháp khác thì bản đó bị huỷ. Chấp nhận cho demo?
 - T10/T11: `/xem <id>` đã làm ở T11 (cảnh 4 cần thấy SĐT trong mô tả bị che). Giai đoạn 2 `search_semantic` chưa làm (chờ AI thật).
+- T12c: Gemini đôi khi lỡ sinh chữ Ả Rập/Hán giữa câu → `agent._clean` lọc bỏ. Độ trễ 1–10s/lượt; model có thể quá tải (503) giờ cao điểm → agent quay về luật, AI soạn tin → `in_review`.

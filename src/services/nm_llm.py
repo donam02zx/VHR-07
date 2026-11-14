@@ -14,15 +14,19 @@ from src.config import get_settings
 LLM_TIMEOUT_S = 18  # dưới mức 20s của safe_ai để lỗi về đúng chỗ
 
 
-def get_nm_llm(fast: bool = False, temperature: float = 0.2) -> BaseChatModel:
-    """fast=True: model rẻ/nhanh (kiểm duyệt, tìm ngữ nghĩa). Thiếu key → lỗi tường minh."""
+def get_nm_llm(fast: bool = False, temperature: float | None = None) -> BaseChatModel:
+    """fast=True: model rẻ/nhanh (kiểm duyệt, tìm ngữ nghĩa). Thiếu key → lỗi tường minh.
+
+    temperature=None: dùng mặc định của model (Gemini 3.x cố định sampling, truyền vào chỉ sinh cảnh báo).
+    """
     s = get_settings()
     if not s.google_api_key:
         raise RuntimeError("Thiếu GOOGLE_API_KEY")
+    extra = {} if temperature is None else {"temperature": temperature}
     return ChatGoogleGenerativeAI(
         model=s.nm_model_fast if fast else s.nm_model,
         google_api_key=s.google_api_key,
-        temperature=temperature,
         timeout=LLM_TIMEOUT_S,
         max_retries=1,
+        **extra,
     )
