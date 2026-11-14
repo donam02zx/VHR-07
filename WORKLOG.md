@@ -35,4 +35,5 @@
 | Claude Code | NM T01 — cấu hình Settings + .env.example + khung thư mục | ✅ Done | src/config.py, tests/test_nm/test_config_nm.py | 0.3h |
 | Claude Code | NM T02 — services/db.py: schema SQLite, máy trạng thái, hàng chờ duyệt | ✅ Done | src/services/db.py, tests/test_nm/test_db.py (30 test) | 0.5h |
 | Claude Code | NM T03 — parse_vnd, mask_phone, strip_accents | ✅ Done | src/services/{vnd,pii,text}.py, tests/test_nm/test_utils.py (62 test) | 0.4h |
+| Claude Code | NM T04 — AI stub + điểm import ai.py | ✅ Done | src/services/{ai_stub,ai}.py, tests/test_nm/test_ai_stub.py (11 test) | 0.3h |
 

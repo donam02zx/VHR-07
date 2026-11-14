@@ -15,7 +15,7 @@ Giữ nguyên số thứ tự. Mỗi lượt chỉ làm MỘT task rồi báo c�
   Làm: `services/vnd.py` (`parse_vnd`), `services/pii.py` (`mask_phone`), hàm bỏ dấu tiếng Việt.
   Xong khi: test bảng ≥ 10 ví dụ mỗi hàm.
 
-- [ ] **T04 — AI stub** — Đọc: 04, 09
+- [x] **T04 — AI stub** — Đọc: 04, 09
   Làm: `services/ai_stub.py` và `services/ai.py` đúng 04.
   Xong khi: test hành vi xác định cho 3 chú thích mẫu (xe đạp, lừa đảo, hàng cấm).
 
