@@ -14,3 +14,8 @@ def _mask(m: re.Match[str]) -> str:
 def mask_phone(text: str) -> str:
     """Thay mọi SĐT bằng dạng che giữa `09xx xxx 678` (giữ 2 số đầu + 3 số cuối)."""
     return _PHONE.sub(_mask, text)
+
+
+def contains_phone(text: str) -> bool:
+    """Có SĐT di động VN trong text không (luật cứng kiểm duyệt, 07)."""
+    return _PHONE.search(text) is not None

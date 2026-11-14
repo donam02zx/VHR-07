@@ -202,14 +202,18 @@ async def test_publish_to_group_masks_phone_and_hides_seller(
     client: ZaloClient, image: str, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     set_group(monkeypatch, "group-9")
-    await send(client, msg("Xe đạp 1tr, gọi 0912345678", image))
+    await send(client, msg("Xe đạp 1tr", image))
     await send(client, msg("ok"))
     group_msgs = [s.text for s in client.sent if s.chat_id == "group-9"]
     assert len(group_msgs) == 1
     public = group_msgs[0]
-    assert "09xx xxx 678" in public and "0912345678" not in public
     assert "Chị Lan" not in public and CHAT not in public
     assert "1.000.000 đ" in public
+    # Tin có SĐT bị kiểm duyệt giữ lại (07), nên kiểm tra che SĐT trực tiếp trên public_text
+    # (đường người duyệt approve ở T08 cũng dùng hàm này).
+    lid = db.search_candidates()[0]["id"]
+    masked = posting.public_text({**db.get_listing(lid), "description": "gọi 0912345678"})
+    assert "09xx xxx 678" in masked and "0912345678" not in masked
 
 
 # ---------------------------------------------------------------- lỗi

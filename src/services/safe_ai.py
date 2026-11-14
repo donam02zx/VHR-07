@@ -20,8 +20,10 @@ class AIUnavailableError(RuntimeError):
     """Hàm AI ném lỗi, quá giờ, hoặc trả sai hợp đồng."""
 
 
-async def call_ai(fn: Callable[..., Any], *args: Any, timeout_s: float = AI_TIMEOUT_S) -> Any:
+async def call_ai(fn: Callable[..., Any], *args: Any, timeout_s: float | None = None) -> Any:
+    """Chạy hàm AI trong thread với timeout (mặc định AI_TIMEOUT_S, đọc lúc gọi)."""
     name = getattr(fn, "__name__", "ai")
+    timeout_s = AI_TIMEOUT_S if timeout_s is None else timeout_s
     try:
         return await asyncio.wait_for(asyncio.to_thread(fn, *args), timeout=timeout_s)
     except TimeoutError:

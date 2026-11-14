@@ -38,4 +38,5 @@
 | Claude Code | NM T04 — AI stub + điểm import ai.py | ✅ Done | src/services/{ai_stub,ai}.py, tests/test_nm/test_ai_stub.py (11 test) | 0.3h |
 | Claude Code | NM T05 — Zalo client + sim, parse_update theo mẫu thật; cập nhật 05 mục ĐÃ KIỂM CHỨNG | ✅ Done | src/channels/zalo.py, tests/test_nm/test_zalo.py (34 test) | 0.6h |
 | Claude Code | NM T06 — luồng đăng tin + dispatcher + safe_ai (timeout/kiểm dạng) + moderation tạm | ✅ Done | src/services/{posting,dispatcher,safe_ai,moderation}.py, tests/test_nm/test_posting.py (30 test) | 0.8h |
+| Claude Code | NM T07 — kiểm duyệt: luật cứng + điểm AI + route theo ngưỡng + AI lỗi → in_review | ✅ Done | src/services/moderation.py, tests/test_nm/test_moderation.py (41 test) | 0.6h |
 

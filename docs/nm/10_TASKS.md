@@ -28,7 +28,7 @@ Giữ nguyên số thứ tự. Mỗi lượt chỉ làm MỘT task rồi báo c�
   Làm: `services/posting.py` + `services/dispatcher.py` (phân loại ảnh/text/lệnh). Chưa gọi kiểm duyệt thật: sau `ok` gọi `moderation.process(listing_id)` (tạm là hàm trả "publish").
   Xong khi: test kịch bản giả: ảnh → nháp → `sửa giá 1tr2` → `ok`; `huy`; ảnh mới thay bản cũ.
 
-- [ ] **T07 — Kiểm duyệt** — Đọc: 07, 04
+- [x] **T07 — Kiểm duyệt** — Đọc: 07, 04
   Làm: `services/moderation.py`: luật cứng, `route()`, `process()` nối trạng thái, xử lý lỗi/timeout AI.
   Xong khi: test 3 nhánh + biên 0.29/0.3/0.79/0.8 + AI ném lỗi → `in_review` `ai_unavailable`.
 
@@ -59,3 +59,4 @@ Giữ nguyên số thứ tự. Mỗi lượt chỉ làm MỘT task rồi báo c�
 - Repo: https://github.com/donam02zx/VHR-07
 - T03: `parse_vnd("800")` (số trần < 1000, không đơn vị) trả None để bot hỏi lại — đúng ý? `mask_phone` chỉ che di động (03/05/07/08/09), chưa che máy bàn 02x.
 - T05: đã có mẫu text/photo thật (getMe.json chưa lưu, dạng getMe đã ghi ở 05). Còn chưa kiểm chứng: timeout getUpdates, sendPhoto (đang NotImplementedError), nhóm (parse_update bỏ qua chat_type khác PRIVATE).
+- T07: giá bất thường (≤0, >1 tỷ, thiếu giá) mình xếp vào nhóm "đưa người duyệt" (điểm tối thiểu 0.3) chứ không từ chối ngay — 07 không nói rõ. Đúng ý?
