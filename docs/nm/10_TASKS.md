@@ -24,7 +24,7 @@ Giữ nguyên số thứ tự. Mỗi lượt chỉ làm MỘT task rồi báo c�
   Làm: `channels/zalo.py` đúng giao diện 05, gồm chế độ `sim`. Test `parse_update` bằng file mẫu thật.
   Xong khi: test xanh; `send_text` cắt đúng 2000 ký tự (test); chế độ sim ghi lại tin gửi đi.
 
-- [ ] **T06 — Luồng đăng tin** — Đọc: 06, 04, 03
+- [x] **T06 — Luồng đăng tin** — Đọc: 06, 04, 03
   Làm: `services/posting.py` + `services/dispatcher.py` (phân loại ảnh/text/lệnh). Chưa gọi kiểm duyệt thật: sau `ok` gọi `moderation.process(listing_id)` (tạm là hàm trả "publish").
   Xong khi: test kịch bản giả: ảnh → nháp → `sửa giá 1tr2` → `ok`; `huy`; ảnh mới thay bản cũ.
 

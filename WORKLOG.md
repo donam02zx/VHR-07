@@ -37,4 +37,5 @@
 | Claude Code | NM T03 — parse_vnd, mask_phone, strip_accents | ✅ Done | src/services/{vnd,pii,text}.py, tests/test_nm/test_utils.py (62 test) | 0.4h |
 | Claude Code | NM T04 — AI stub + điểm import ai.py | ✅ Done | src/services/{ai_stub,ai}.py, tests/test_nm/test_ai_stub.py (11 test) | 0.3h |
 | Claude Code | NM T05 — Zalo client + sim, parse_update theo mẫu thật; cập nhật 05 mục ĐÃ KIỂM CHỨNG | ✅ Done | src/channels/zalo.py, tests/test_nm/test_zalo.py (34 test) | 0.6h |
+| Claude Code | NM T06 — luồng đăng tin + dispatcher + safe_ai (timeout/kiểm dạng) + moderation tạm | ✅ Done | src/services/{posting,dispatcher,safe_ai,moderation}.py, tests/test_nm/test_posting.py (30 test) | 0.8h |
 
