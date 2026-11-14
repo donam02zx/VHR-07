@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import dataclasses
 import logging
 
 from src.channels.zalo import Inbound, ZaloClient
@@ -13,6 +14,13 @@ from src.services.posting import Reply
 logger = logging.getLogger("nm.dispatcher")
 
 AGENT_TIMEOUT_S = 40.0  # nhiều bước gọi LLM; quá giờ → luật từ khoá
+
+# Nhóm: mọi việc (bản nháp, chốt giá, tìm, hỏi người bán) làm trong chat RIÊNG; nhóm chỉ nhận một dòng báo.
+GROUP_ACK = "{name} ơi, bot đã nhắn riêng cho bạn — mở chat với bot để xem nhé."
+GROUP_NEED_DM = (
+    "{name} ơi, bot chưa nhắn riêng được cho bạn (Zalo chỉ cho bot nhắn người đã từng chat với bot). "
+    'Bạn bấm vào bot, nhắn "hi", rồi gửi lại nhé.'
+)
 
 
 def classify(inbound: Inbound) -> str:
@@ -77,15 +85,34 @@ async def deliver(client: ZaloClient, replies: list[Reply], origin_chat: str | N
     return all_ok
 
 
+async def handle_group(inbound: Inbound, client: ZaloClient) -> list[Reply]:
+    """Tin có @nhắc bot trong nhóm → xử lý như người đó nhắn riêng (chat 1:1 có id = id người gửi, 05),
+    trả lời vào chat riêng; nhóm chỉ nhận một dòng báo đã nhắn riêng / chưa nhắn được."""
+    private = dataclasses.replace(inbound, chat_id=inbound.user_id, is_group=False)
+    replies = await route(private, client)
+    ok = await deliver(client, replies, private.chat_id, inbound.event_key)
+    name = inbound.display_name or "Bạn"
+    notice = (GROUP_ACK if ok else GROUP_NEED_DM).format(name=name)
+    try:
+        await client.send_text(inbound.chat_id, notice)
+    except Exception as exc:
+        logger.error("gửi vào nhóm lỗi event=%s: %s", inbound.event_key, type(exc).__name__)
+    return replies
+
+
 async def handle(inbound: Inbound, client: ZaloClient) -> list[Reply]:
     """Xử lý một tin đến và gửi trả lời."""
     kind = classify(inbound)
     # Không log nội dung tin (09) — chỉ loại, tên lệnh, có ảnh, độ dài chữ.
     command = inbound.text.split(maxsplit=1)[0][:20] if kind == "command" and inbound.text.strip() else "-"
     logger.info(
-        "in event=%s kind=%s cmd=%s has_image=%s text_len=%d",
-        inbound.event_key, kind, command, bool(inbound.image_ref), len(inbound.text),
+        "in event=%s kind=%s cmd=%s has_image=%s text_len=%d group=%s",
+        inbound.event_key, kind, command, bool(inbound.image_ref), len(inbound.text), inbound.is_group,
     )
+    if inbound.is_group:
+        replies = await handle_group(inbound, client)
+        logger.info("out event=%s replies=%d (nhóm → chat riêng)", inbound.event_key, len(replies))
+        return replies
     replies = await route(inbound, client)
     await deliver(client, replies, inbound.chat_id, inbound.event_key)
     logger.info("out event=%s replies=%d", inbound.event_key, len(replies))

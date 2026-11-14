@@ -262,3 +262,50 @@ async def test_send_failure_does_not_raise(client: ZaloClient, monkeypatch: pyte
     monkeypatch.setattr(client, "send_text", fail)
     replies = await dispatcher.handle(msg("xin chào"), client)
     assert [r.text for r in replies] == [commands.WELCOME]
+
+
+# ---------------------------------------------------------------- nhóm (@nhắc bot) → chat riêng
+def group_msg(text: str = "", image_ref: str | None = None, user: str = CHAT) -> Inbound:
+    return Inbound(f"e{next(_seq)}", "zgr-test", user, "Nam", text, image_ref, True)
+
+
+async def test_group_photo_mention_sends_draft_privately(client: ZaloClient, image: str) -> None:
+    await dispatcher.handle(group_msg("tao muốn bán điện thoại", image), client)
+    to_user = [s for s in client.sent if s.chat_id == CHAT]
+    to_group = [s for s in client.sent if s.chat_id == "zgr-test"]
+    assert len(to_user) == 1 and to_user[0].text.startswith("Bản nháp tin #")
+    assert [s.text for s in to_group] == [dispatcher.GROUP_ACK.format(name="Nam")]
+    # chốt giá + ok tiếp tục trong chat riêng như bình thường
+    await send(client, msg("tôi muốn giá 15 triệu"))
+    lid = current_listing()["id"]
+    await send(client, msg("ok"))
+    assert db.get_listing(lid)["price_vnd"] == 15_000_000
+    assert db.get_listing(lid)["status"] == "published"
+
+
+async def test_group_mention_user_never_chatted_told_in_group(
+    client: ZaloClient, image: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    real_send = client.send_text
+
+    async def send_text(chat_id: str, text: str) -> None:
+        if chat_id == CHAT:
+            raise RuntimeError("user never chatted with bot")
+        await real_send(chat_id, text)
+
+    monkeypatch.setattr(client, "send_text", send_text)
+    await dispatcher.handle(group_msg("bán nồi cơm", image), client)
+    assert [s.text for s in client.sent if s.chat_id == "zgr-test"] == [dispatcher.GROUP_NEED_DM.format(name="Nam")]
+
+
+async def test_group_send_failure_does_not_raise(client: ZaloClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    real_send = client.send_text
+
+    async def send_text(chat_id: str, text: str) -> None:
+        if chat_id == "zgr-test":
+            raise RuntimeError("bot cannot post in group")
+        await real_send(chat_id, text)
+
+    monkeypatch.setattr(client, "send_text", send_text)
+    replies = await dispatcher.handle(group_msg("xin chào"), client)
+    assert replies and all(r.chat_id == CHAT for r in replies)

@@ -1,3 +1,4 @@
+import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -27,6 +28,10 @@ async def lifespan(app: FastAPI):
     app.state.channel = channel
     poller = None
     if settings.channel_mode == "zalo":
+        try:  # tên bot để bỏ "@tên bot" trong tin nhóm (05); lỗi → vẫn chạy, tin nhóm giữ nguyên chữ
+            channel.bot_name = (await channel.get_me()).get("display_name")
+        except Exception as exc:
+            logging.getLogger("nm.main").warning("getMe lỗi, không bỏ được @tên bot: %s", type(exc).__name__)
         limit = get_settings().nm_capture_samples
         capture = SampleCapture(limit) if limit > 0 else None
         poller = Poller(channel, lambda inbound: dispatcher.handle(inbound, channel), capture=capture)

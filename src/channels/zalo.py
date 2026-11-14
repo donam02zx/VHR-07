@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import re
 from collections import deque
 from dataclasses import dataclass
 from pathlib import Path
@@ -28,6 +29,7 @@ MAX_RETRIES = 2
 EVENT_TEXT = "message.text.received"
 EVENT_IMAGE = "message.image.received"
 CHAT_PRIVATE = "PRIVATE"
+CHAT_GROUP = "GROUP"  # ĐÃ KIỂM CHỨNG 2026-11-14: chỉ nhận tin có @nhắc bot (05)
 NO_UPDATE_CODE = 408
 
 
@@ -93,10 +95,20 @@ def _require(obj: dict[str, Any], key: str, where: str) -> Any:
     return value
 
 
-def parse_update(raw: dict[str, Any]) -> Inbound | None:
+def strip_mention(text: str, bot_name: str | None) -> str:
+    """Bỏ "@<tên bot>" (Zalo để nguyên văn trong text/caption, không có offset — 05)."""
+    if not bot_name:
+        return text.strip()
+    cleaned = re.sub(r"@" + re.escape(bot_name), " ", text, flags=re.IGNORECASE)
+    return re.sub(r"\s{2,}", " ", cleaned).strip()
+
+
+def parse_update(raw: dict[str, Any], bot_name: str | None = None) -> Inbound | None:
     """Chuẩn hoá MỘT sự kiện (`result` của getUpdates).
 
-    None: loại tin chưa hỗ trợ, chat không phải PRIVATE (nhóm chưa kiểm chứng), hoặc tin từ bot.
+    Nhóm (`GROUP`): Zalo chỉ gửi tin có @nhắc bot; bỏ phần nhắc khỏi chữ, `is_group=True`,
+    `chat_id` = id nhóm (`zgr-…`), `user_id` = id người gửi (trùng id chat 1:1 của họ).
+    None: loại tin chưa hỗ trợ, loại chat lạ, hoặc tin từ bot.
     ZaloParseError: loại tin hỗ trợ nhưng thiếu trường bắt buộc.
     """
     event = raw.get("event_name")
@@ -112,9 +124,10 @@ def parse_update(raw: dict[str, Any]) -> Inbound | None:
         raise ZaloParseError("thiếu message.chat hoặc message.from")
     message_id = str(_require(msg, "message_id", "message"))
     chat_type = _require(chat, "chat_type", "message.chat")
-    if chat_type != CHAT_PRIVATE:
+    if chat_type not in (CHAT_PRIVATE, CHAT_GROUP):
         logger.warning("bỏ qua chat_type=%s (chưa kiểm chứng) msg=%s", chat_type, message_id)
         return None
+    is_group = chat_type == CHAT_GROUP
     if sender.get("is_bot") is True:
         return None
     if event == EVENT_TEXT:
@@ -123,6 +136,8 @@ def parse_update(raw: dict[str, Any]) -> Inbound | None:
     else:
         image_ref = str(_require(msg, "photo_url", "message"))
         text = str(msg.get("caption") or "")
+    if is_group:
+        text = strip_mention(text, bot_name)
     return Inbound(
         event_key=f"zalo:{message_id}",
         chat_id=str(_require(chat, "id", "message.chat")),
@@ -130,7 +145,7 @@ def parse_update(raw: dict[str, Any]) -> Inbound | None:
         display_name=sender.get("display_name"),
         text=text,
         image_ref=image_ref,
-        is_group=False,
+        is_group=is_group,
     )
 
 
@@ -148,6 +163,7 @@ class ZaloClient:
         self._token = self._settings.zalo_bot_token
         self._http = http
         self._retry_delay_s = retry_delay_s
+        self.bot_name: str | None = None  # display_name từ getMe (lifespan) — để bỏ "@tên bot" trong nhóm
         self.sent: list[Sent] = []  # sim: tin đã gửi
         self.inbox: deque[dict[str, Any]] = deque()  # sim: sự kiện chờ get_updates
 
@@ -212,7 +228,7 @@ class ZaloClient:
         return [result]
 
     def parse_update(self, raw: dict[str, Any]) -> Inbound | None:
-        return parse_update(raw)
+        return parse_update(raw, self.bot_name)
 
     def push_update(self, raw: dict[str, Any]) -> None:
         """Sim: xếp một sự kiện (dạng `result`) cho get_updates trả về."""

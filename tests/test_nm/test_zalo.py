@@ -72,10 +72,41 @@ def test_unsupported_event_returns_none(event_name: str | None) -> None:
     assert parse_update(raw) is None
 
 
-def test_non_private_chat_ignored() -> None:
+def test_unknown_chat_type_ignored() -> None:
     raw = event("update_text.json")
-    raw["message"]["chat"]["chat_type"] = "GROUP"
+    raw["message"]["chat"]["chat_type"] = "CHANNEL"
     assert parse_update(raw) is None
+
+
+# Mẫu nhóm thật (đã che): ảnh có @nhắc bot — Zalo chỉ gửi tin nhóm có @nhắc (05)
+def test_group_photo_mention_sample() -> None:
+    inbound = parse_update(event("update_group_photo_mention.json"), "Bot CHỢ CƯ DÂN AI")
+    assert inbound is not None
+    assert inbound.is_group is True
+    assert inbound.chat_id.startswith("zgr-")
+    assert inbound.user_id == "aaaabbbbccccdddd0000"
+    assert inbound.text == "tao muốn bán điện thoại"
+    assert inbound.image_ref is not None
+
+
+def test_group_text_mention_stripped_anywhere_case_insensitive() -> None:
+    raw = event("update_text.json")
+    raw["message"]["chat"] = {"id": "zgr-abc", "chat_type": "GROUP"}
+    raw["message"]["text"] = "tìm laptop @bot chợ cư dân ai  dưới 5tr"
+    inbound = parse_update(raw, "Bot CHỢ CƯ DÂN AI")
+    assert inbound is not None and inbound.text == "tìm laptop dưới 5tr"
+    assert inbound.chat_id == "zgr-abc" and inbound.user_id != "zgr-abc"
+
+
+def test_strip_mention_without_bot_name_keeps_text() -> None:
+    assert zalo.strip_mention("  @Bot X tìm laptop ", None) == "@Bot X tìm laptop"
+
+
+def test_client_parse_update_uses_bot_name() -> None:
+    c = ZaloClient(Settings(_env_file=None, channel_mode="sim"))
+    c.bot_name = "Bot CHỢ CƯ DÂN AI"
+    inbound = c.parse_update(event("update_group_photo_mention.json"))
+    assert inbound is not None and inbound.text == "tao muốn bán điện thoại"
 
 
 def test_bot_sender_ignored() -> None:

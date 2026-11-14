@@ -31,7 +31,10 @@
     `from.id` trùng ID của người đó trong chat 1:1. Phần nhắc nằm NGUYÊN VĂN trong `text`/`caption`
     ("@Bot CHỢ CƯ DÂN AI ..."), không có trường entities/offset → phải tự cắt theo tên bot.
   - Chưa thử: tin chữ có @nhắc (chắc cùng dạng `message.text.received`), `sendMessage` vào `zgr-…`,
-    nhóm "chỉ trưởng/phó nhóm gửi tin". `parse_update` hiện vẫn bỏ qua GROUP.
+    nhóm "chỉ trưởng/phó nhóm gửi tin".
+  - Cách xử lý (`dispatcher.handle_group`): tin @nhắc → xử lý như người đó nhắn riêng (chat_id = from.id),
+    trả lời vào chat RIÊNG (bản nháp, chốt giá, tìm…); nhóm chỉ nhận một dòng "đã nhắn riêng" hoặc
+    "nhắn hi cho bot trước" nếu bot chưa nhắn riêng được. Tên bot lấy từ `getMe.display_name` lúc khởi động.
 - Giới hạn tốc độ; loại tin khác (sticker, file): `parse_update` trả `None`.
 - Xoá/thu hồi tin nhắn: giả định KHÔNG làm được. Tin bị gỡ → DB đổi trạng thái và bot trả lời "Tin #N đã được gỡ".
 - Nhắn riêng cho người chưa từng chat với bot: coi là không được.
