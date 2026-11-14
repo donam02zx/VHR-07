@@ -36,7 +36,7 @@ Giữ nguyên số thứ tự. Mỗi lượt chỉ làm MỘT task rồi báo c�
   Làm: `api/reviews.py`, đăng ký router + mount static trong `main.py`, `static/console.html`. Duyệt xong nhắn người bán qua kênh.
   Xong khi: test API (token sai → 401, quyết định hai lần → 409); mở `/console` thấy hàng chờ.
 
-- [ ] **T09 — Poller và nối vào app** — Đọc: 05 (mục Poller), 02
+- [x] **T09 — Poller và nối vào app** — Đọc: 05 (mục Poller), 02
   Làm: `channels/poller.py`, khởi động/dừng trong `lifespan` khi `channel_mode="zalo"`; chống trùng bằng `try_mark_event`.
   Xong khi: test với client giả: 3 update → 3 lần handler, update lặp bị bỏ qua, handler ném lỗi không dừng vòng lặp.
 

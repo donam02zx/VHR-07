@@ -8,9 +8,10 @@ from fastapi.staticfiles import StaticFiles
 
 from src.api import reviews
 from src.api.routes import router
+from src.channels.poller import Poller
 from src.channels.zalo import ZaloClient
 from src.config import get_settings
-from src.services import db
+from src.services import db, dispatcher
 
 STATIC_DIR = Path(__file__).parent / "static"
 
@@ -21,9 +22,16 @@ async def lifespan(app: FastAPI):
     print(f"Starting {settings.app_name} in {settings.app_env} mode")
     # NeighborMarket: DB + kênh nhắn tin dùng chung (docs/nm/02).
     db.init_db()
-    app.state.channel = ZaloClient(settings)
+    channel = ZaloClient(settings)
+    app.state.channel = channel
+    poller = None
+    if settings.channel_mode == "zalo":
+        poller = Poller(channel, lambda inbound: dispatcher.handle(inbound, channel))
+        poller.start()
     yield
-    await app.state.channel.aclose()
+    if poller is not None:
+        await poller.stop()
+    await channel.aclose()
     print("Shutting down...")
 
 
