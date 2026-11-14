@@ -42,8 +42,10 @@ class Poller:
         handler: Handler,
         sleep: Sleep = asyncio.sleep,
         idle_delay_s: float = 0.0,
+        capture: Callable[[dict[str, Any]], Any] | None = None,
     ) -> None:
         self._source = source
+        self._capture = capture  # lưu mẫu sự kiện chưa kiểm chứng (sample_capture), tắt mặc định
         self._handler = handler
         self._sleep = sleep
         # 0: getUpdates của Zalo đã tự chờ (408 khi hết giờ) → gọi lại ngay; sleep(0) vẫn nhường event loop.
@@ -53,6 +55,11 @@ class Poller:
 
     async def process(self, raw: dict[str, Any]) -> bool:
         """Xử lý một sự kiện thô. True nếu handler đã được gọi. Không bao giờ ném lỗi."""
+        if self._capture is not None:
+            try:
+                self._capture(raw)
+            except Exception:
+                logger.exception("lưu mẫu lỗi (bỏ qua, vẫn xử lý update)")
         try:
             inbound = self._source.parse_update(raw)
         except ZaloParseError as exc:

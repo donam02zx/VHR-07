@@ -9,6 +9,7 @@ from fastapi.staticfiles import StaticFiles
 from src.api import reviews
 from src.api.routes import router
 from src.channels.poller import Poller
+from src.channels.sample_capture import SampleCapture
 from src.channels.zalo import ZaloClient
 from src.config import get_settings
 from src.services import db, dispatcher
@@ -26,7 +27,9 @@ async def lifespan(app: FastAPI):
     app.state.channel = channel
     poller = None
     if settings.channel_mode == "zalo":
-        poller = Poller(channel, lambda inbound: dispatcher.handle(inbound, channel))
+        limit = get_settings().nm_capture_samples
+        capture = SampleCapture(limit) if limit > 0 else None
+        poller = Poller(channel, lambda inbound: dispatcher.handle(inbound, channel), capture=capture)
         poller.start()
     yield
     if poller is not None:

@@ -68,3 +68,6 @@ out/
 /*.jpg
 /*.jpeg
 /*.png
+
+# Mẫu Zalo thô chưa che ID/tên (sample_capture) — che rồi mới chép sang docs/nm/samples/
+docs/nm/samples/captured/

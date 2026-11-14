@@ -58,6 +58,8 @@ class Settings(BaseSettings):
     nm_model: str = "gemini-3.5-flash-lite"  # đọc ảnh + gọi công cụ (đo 2026-11-14: 1–10s; bản flash 16s+ hoặc quá giờ)
     nm_model_fast: str = "gemini-3.5-flash-lite"  # kiểm duyệt, tìm ngữ nghĩa (rẻ, nhanh)
     nm_agent_max_steps: int = Field(default=5, ge=1, le=10)
+    # >0: lưu nguyên JSON tối đa N sự kiện chưa kiểm chứng (nhóm, loại lạ) vào docs/nm/samples/captured/
+    nm_capture_samples: int = Field(default=0, ge=0, le=50)
 
     @model_validator(mode="after")
     def _check_nm(self) -> "Settings":

@@ -162,3 +162,40 @@ async def test_lifespan_starts_poller_only_in_zalo_mode(monkeypatch: pytest.Monk
         async with main.lifespan(main.app):
             pass
         assert started == expected, mode
+
+
+# ---------------------------------------------------------------- lưu mẫu chưa kiểm chứng
+def group_update(message_id: str) -> dict[str, Any]:
+    raw = update(message_id)
+    raw["message"]["chat"]["chat_type"] = "GROUP"
+    return raw
+
+
+def test_capture_saves_only_unverified_and_stops_at_limit(tmp_path: Path) -> None:
+    from src.channels.sample_capture import SampleCapture
+
+    cap = SampleCapture(2, tmp_path / "cap")
+    assert cap(update("p1")) is None  # PRIVATE text đã kiểm chứng → không lưu
+    first = cap(group_update("g1"))
+    assert first is not None and first.name == "01_message_text_received_GROUP.json"
+    assert json.loads(first.read_text(encoding="utf-8"))["message"]["message_id"] == "g1"
+    assert cap({"event_name": "group.member.joined"}) is not None  # loại lạ cũng lưu
+    assert cap(group_update("g2")) is None  # hết hạn mức
+    assert len(list((tmp_path / "cap").iterdir())) == 2
+
+
+async def test_poller_calls_capture_and_capture_error_does_not_block() -> None:
+    seen: list[str] = []
+
+    def boom(raw: dict[str, Any]) -> None:
+        seen.append(raw["message"]["message_id"])
+        raise RuntimeError("disk full")
+
+    handled: list[str] = []
+
+    async def handler(inbound: Inbound) -> None:
+        handled.append(inbound.event_key)
+
+    p = Poller(FakeSource([]), handler, capture=boom)
+    assert await p.process(update("m1")) is True
+    assert seen == ["m1"] and handled == ["zalo:m1"]
