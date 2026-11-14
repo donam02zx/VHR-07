@@ -56,4 +56,4 @@ Giữ nguyên số thứ tự. Mỗi lượt chỉ làm MỘT task rồi báo c�
   Làm: cập nhật `PROJECT_CONTEXT.md`, `README.md` (cách chạy), `docs/architecture_diagram.md` (sơ đồ ở 02), `WORKLOG.md`. `make lint` và `pytest` xanh.
 
 ## Câu hỏi mở (ghi vào đây, đừng tự đoán)
-- Đã `git init` local (2026-11-14). Chưa có remote GitHub: máy không có `gh` CLI.
+- (trống) — repo: https://github.com/donam02zx/VHR-07
