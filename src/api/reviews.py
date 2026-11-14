@@ -7,14 +7,14 @@ from __future__ import annotations
 
 import hmac
 import logging
-from typing import Any, Literal
+from typing import Literal
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from src.channels.zalo import ZaloClient
 from src.config import get_settings
-from src.services import db, posting
+from src.services import db, reviewflow
 from src.services.posting import Reply
 
 logger = logging.getLogger("nm.reviews")
@@ -61,45 +61,17 @@ async def list_reviews(status: Literal["pending", "approved", "rejected", "needs
 
 @router.post("/reviews/{review_id}/decide", dependencies=[Depends(require_console_token)])
 async def decide(review_id: int, body: DecideRequest, channel: ZaloClient = Depends(get_channel)) -> DecideResponse:
-    review = db.get_review(review_id)
-    if review is None:
-        raise HTTPException(404, "Không có mục duyệt này")
     try:
-        final_status = db.decide_review(review_id, _DECISION_MAP[body.decision], REVIEWER, body.note or None)
+        listing_id, status, replies = reviewflow.decide(review_id, _DECISION_MAP[body.decision], REVIEWER, body.note)
+    except LookupError:
+        raise HTTPException(404, "Không có mục duyệt này") from None
     except db.ReviewAlreadyDecidedError:
         raise HTTPException(409, "Mục này đã được quyết") from None
     except db.InvalidTransitionError as exc:
         logger.warning("decide review=%s: %s", review_id, exc)
         raise HTTPException(409, "Tin không còn ở trạng thái chờ duyệt") from None
-
-    listing_id = review["listing_id"]
-    replies = _after_decision(listing_id, final_status, body.note, review.get("reason") or "")
     notified = await _send_all(channel, replies, review_id)
-    current = db.get_listing(listing_id)["status"]  # needs_fix đã được mở lại → awaiting_confirm
-    return DecideResponse(review_id=review_id, listing_id=listing_id, listing_status=current, notified=notified)
-
-
-def _seller_chat_id(listing: dict[str, Any]) -> str:
-    """Chat 1:1: chat.id == from.id (05, ĐÃ KIỂM CHỨNG) → nhắn theo zalo_user_id."""
-    seller = db.get_user(listing["seller_id"])
-    if seller is None:
-        raise RuntimeError(f"listing {listing['id']} không có người bán")
-    return seller["zalo_user_id"]
-
-
-def _after_decision(listing_id: int, final_status: str, note: str, review_reason: str) -> list[Reply]:
-    listing = db.get_listing(listing_id)
-    chat_id = _seller_chat_id(listing)
-    lid = listing["id"]
-    if final_status == "published":
-        return posting.publish_replies(listing, chat_id)
-    if final_status == "rejected":
-        why = note or "nội dung chưa phù hợp quy định của nhóm"
-        return [Reply(chat_id, f"Tin #{lid} không được đăng: {why}.")]
-    # needs_fix: mở lại bản nháp để người bán "sửa ..." rồi "ok" (07). Bản nháp khác đang dở bị huỷ.
-    posting.reopen_for_fix(chat_id, lid)
-    head = f"Tin #{lid} cần sửa trước khi đăng: {note or review_reason or 'người duyệt yêu cầu chỉnh sửa'}."
-    return [Reply(chat_id, head + "\n\n" + posting.draft_text(db.get_listing(lid)))]
+    return DecideResponse(review_id=review_id, listing_id=listing_id, listing_status=status, notified=notified)
 
 
 async def _send_all(channel: ZaloClient, replies: list[Reply], review_id: int) -> bool:

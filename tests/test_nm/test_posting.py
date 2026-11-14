@@ -194,7 +194,7 @@ async def test_idle_text_hint(client: ZaloClient) -> None:
 async def test_command_does_not_change_state(client: ZaloClient, image: str) -> None:
     await send(client, msg("Xe đạp", image))
     out = await send(client, msg("/tim xe"))
-    assert out == [dispatcher.MSG_COMMAND_SOON]
+    assert out == ["Chưa có tin phù hợp."]
     assert db.get_conversation(CHAT)["state"] == "awaiting_confirm"
 
 

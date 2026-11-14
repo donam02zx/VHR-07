@@ -5,12 +5,10 @@ from __future__ import annotations
 import logging
 
 from src.channels.zalo import Inbound, ZaloClient
-from src.services import posting
+from src.services import commands, posting
 from src.services.posting import Reply
 
 logger = logging.getLogger("nm.dispatcher")
-
-MSG_COMMAND_SOON = "Lệnh này sắp có. Hiện bạn có thể gửi ảnh món đồ để đăng tin."
 
 
 def classify(inbound: Inbound) -> str:
@@ -27,8 +25,7 @@ async def route(inbound: Inbound, client: ZaloClient) -> list[Reply]:
     if kind == "image":
         return await posting.handle_image(inbound, client.download_image)
     if kind == "command":
-        # T10 nối services/commands; lệnh không đổi trạng thái hội thoại (06).
-        return [Reply(inbound.chat_id, MSG_COMMAND_SOON)]
+        return await commands.handle(inbound)
     return await posting.handle_text(inbound)
 
 

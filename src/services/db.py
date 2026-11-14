@@ -359,3 +359,29 @@ def search_candidates(limit: int = 200) -> list[dict[str, Any]]:
             (limit,),
         ).fetchall()
     return [dict(r) for r in rows]
+
+
+# ---------------------------------------------------------------- lệnh người dùng (08)
+def get_user_by_zalo(zalo_user_id: str) -> dict[str, Any] | None:
+    with connect() as conn:
+        return _row(conn.execute("SELECT * FROM users WHERE zalo_user_id=?", (zalo_user_id,)).fetchone())
+
+
+def list_listings_by_seller(seller_id: int, limit: int = 20) -> list[dict[str, Any]]:
+    """Tin của một người bán, mới nhất trước (cho /tincuatoi)."""
+    with connect() as conn:
+        rows = conn.execute(
+            "SELECT id, title, status, price_vnd, updated_at FROM listings WHERE seller_id=? ORDER BY id DESC LIMIT ?",
+            (seller_id, limit),
+        ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def pending_review_for_listing(listing_id: int) -> dict[str, Any] | None:
+    with connect() as conn:
+        return _row(
+            conn.execute(
+                "SELECT * FROM review_queue WHERE listing_id=? AND status='pending' ORDER BY id DESC LIMIT 1",
+                (listing_id,),
+            ).fetchone()
+        )

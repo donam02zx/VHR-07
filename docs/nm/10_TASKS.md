@@ -40,7 +40,7 @@ Giữ nguyên số thứ tự. Mỗi lượt chỉ làm MỘT task rồi báo c�
   Làm: `channels/poller.py`, khởi động/dừng trong `lifespan` khi `channel_mode="zalo"`; chống trùng bằng `try_mark_event`.
   Xong khi: test với client giả: 3 update → 3 lần handler, update lặp bị bỏ qua, handler ném lỗi không dừng vòng lặp.
 
-- [ ] **T10 — Lệnh và tìm kiếm** — Đọc: 08
+- [x] **T10 — Lệnh và tìm kiếm** — Đọc: 08
   Làm: `services/commands.py`, `services/search.py`; nối vào dispatcher.
   Xong khi: test `/tim xe dap` (không dấu) ra tin "Xe đạp...", `/rut` sai chủ bị từ chối, SĐT trong kết quả đã che.
 
@@ -61,3 +61,4 @@ Giữ nguyên số thứ tự. Mỗi lượt chỉ làm MỘT task rồi báo c�
 - T05: đã có mẫu text/photo thật (getMe.json chưa lưu, dạng getMe đã ghi ở 05). Còn chưa kiểm chứng: timeout getUpdates, sendPhoto (đang NotImplementedError), nhóm (parse_update bỏ qua chat_type khác PRIVATE).
 - T07: giá bất thường (≤0, >1 tỷ, thiếu giá) mình xếp vào nhóm "đưa người duyệt" (điểm tối thiểu 0.3) chứ không từ chối ngay — 07 không nói rõ. Đúng ý?
 - T08: `needs_fix` mở lại tin ngay (về awaiting_confirm, hội thoại chờ sửa/ok); nếu người bán đang có bản nháp khác thì bản đó bị huỷ. Chấp nhận cho demo?
+- T10: chưa làm `/xem <id>` (08 ghi tuỳ chọn) và Giai đoạn 2 `search_semantic` (chờ AI thật). Kết quả /tim vẫn in dòng gợi ý "/xem"? — hiện KHÔNG in để khỏi trỏ tới lệnh chưa có.
