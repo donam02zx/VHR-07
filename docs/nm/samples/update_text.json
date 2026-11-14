@@ -1,0 +1,1 @@
+{"ok":true,"result":{"message":{"chat":{"id":"c0db7966bd32546c0d23","chat_type":"PRIVATE"},"text":"Xin chào","message_id":"e9f34d27b47be522bc6d","date":1794633203613,"message_type":"CHAT_TEXT","from":{"id":"c0db7966bd32546c0d23","is_bot":false,"display_name":"Nguoi Dung Mau"}},"event_name":"message.text.received"},"error_code":0}

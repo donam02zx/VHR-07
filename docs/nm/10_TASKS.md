@@ -19,7 +19,7 @@ Giữ nguyên số thứ tự. Mỗi lượt chỉ làm MỘT task rồi báo c�
   Làm: `services/ai_stub.py` và `services/ai.py` đúng 04.
   Xong khi: test hành vi xác định cho 3 chú thích mẫu (xe đạp, lừa đảo, hàng cấm).
 
-- [ ] **T05 — Zalo client (CẦN MẪU THẬT)** — Đọc: 05, 09
+- [x] **T05 — Zalo client (CẦN MẪU THẬT)** — Đọc: 05, 09
   Điều kiện: có file trong `docs/nm/samples/`. **Không có → dừng, hỏi người dùng.**
   Làm: `channels/zalo.py` đúng giao diện 05, gồm chế độ `sim`. Test `parse_update` bằng file mẫu thật.
   Xong khi: test xanh; `send_text` cắt đúng 2000 ký tự (test); chế độ sim ghi lại tin gửi đi.
@@ -58,4 +58,4 @@ Giữ nguyên số thứ tự. Mỗi lượt chỉ làm MỘT task rồi báo c�
 ## Câu hỏi mở (ghi vào đây, đừng tự đoán)
 - Repo: https://github.com/donam02zx/VHR-07
 - T03: `parse_vnd("800")` (số trần < 1000, không đơn vị) trả None để bot hỏi lại — đúng ý? `mask_phone` chỉ che di động (03/05/07/08/09), chưa che máy bàn 02x.
-- T05 (2026-11-14): `docs/nm/samples/` chưa có JSON thật (update_text, update_photo, getMe) → T05 dừng, chờ người dùng chạy curl với token.
+- T05: đã có mẫu text/photo thật (getMe.json chưa lưu, dạng getMe đã ghi ở 05). Còn chưa kiểm chứng: timeout getUpdates, sendPhoto (đang NotImplementedError), nhóm (parse_update bỏ qua chat_type khác PRIVATE).
