@@ -56,6 +56,10 @@ Giữ nguyên số thứ tự. Mỗi lượt chỉ làm MỘT task rồi báo c�
   Làm: `/hoi <id> <câu hỏi>` → bot nhắn người bán kèm mã hỏi; `/tl <mã hỏi> <trả lời>` → bot chuyển về người mua. `/xem` gửi ảnh bằng `sendPhoto` (đã kiểm chứng). Log mỗi tin đến (không log nội dung). Bỏ dòng "Liên hệ qua bot..." trong bản công khai.
   Xong khi: test hỏi–đáp hai chiều ẩn danh, sai chủ bị từ chối, người bán không nhận được → người mua được báo; `/xem` gửi ảnh trước chữ.
 
+- [x] **T12b — Nhắn tự nhiên không cần "/" (người dùng yêu cầu)** — Đọc: 06, 08
+  Làm: `services/intent.py` (luật từ khoá): tìm / muốn bán / xem / hỏi / chào / cảm ơn; bản nháp hiểu "oke", "đăng đi", "thôi", "giá 1tr2", "1tr2", "đổi tên ...".
+  Xong khi: test bảng ví dụ (có/không dấu, "bán/bạn/bàn"), đang nháp mà hỏi tìm thì vẫn giữ nháp + nhắc.
+
 - [ ] **T13 — Dọn và tài liệu** — Đọc: 09
   Làm: cập nhật `PROJECT_CONTEXT.md`, `README.md` (cách chạy), `docs/architecture_diagram.md` (sơ đồ ở 02), `WORKLOG.md`. `make lint` và `pytest` xanh.
 

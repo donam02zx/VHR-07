@@ -1,5 +1,15 @@
 # 08 — Lệnh người dùng và tìm kiếm
 
+## Câu tự nhiên, không cần "/" (`services/intent.py`, luật từ khoá — không dùng LLM)
+| Ví dụ | Hiểu là |
+|---|---|
+| "tôi muốn tìm laptop", "có ai bán xe đạp không", "cần mua tủ lạnh", "laptop" | tìm (bỏ từ đệm → `search`) |
+| "tôi muốn bán laptop dell", "cần thanh lý tủ lạnh", "Bán xe đạp" | muốn bán → hướng dẫn gửi ẢNH kèm mô tả, giá |
+| "xem tin 13", "#13" / "hỏi 13 còn không bạn?" | như `/xem 13` / `/hoi 13 ...` |
+| "tin của tôi" / "hướng dẫn" / "xin chào" / "cảm ơn" | `/tincuatoi` / `/help` / lời chào / đáp lễ |
+Câu không có từ khoá ý định nhưng có từ có nghĩa → coi là tìm kiếm (khi KHÔNG đang có bản nháp).
+Bỏ dấu thì "bán/bạn/bàn" trùng nhau → luật mơ hồ kiểm trên chữ có dấu. Lệnh "/" vẫn dùng được như cũ.
+
 ## Lệnh (không phân biệt hoa thường, bỏ dấu cách thừa)
 | Lệnh | Việc |
 |---|---|

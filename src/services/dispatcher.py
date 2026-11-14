@@ -26,7 +26,12 @@ async def route(inbound: Inbound, client: ZaloClient) -> list[Reply]:
         return await posting.handle_image(inbound, client.download_image)
     if kind == "command":
         return await commands.handle(inbound)
-    return await posting.handle_text(inbound)
+    draft = posting.current_draft(inbound.chat_id)
+    if draft is not None:
+        replies = await posting.handle_draft_text(inbound, draft)
+        if replies is not None:
+            return replies
+    return await commands.handle_natural(inbound, draft["id"] if draft else None)
 
 
 async def send_reply(client: ZaloClient, reply: Reply) -> None:

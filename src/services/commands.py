@@ -6,7 +6,7 @@ import logging
 
 from src.channels.zalo import Inbound
 from src.config import get_settings
-from src.services import db, posting, reviewflow, search
+from src.services import db, intent, posting, reviewflow, search
 from src.services.pii import mask_phone
 from src.services.posting import Reply
 from src.services.text import normalize_text
@@ -24,6 +24,13 @@ HELP = (
     "- /rut <mã tin>: rút tin của bạn."
 )
 HELP_SHORT = "Mình chưa biết lệnh này. Gõ /help để xem các lệnh."
+WELCOME = (
+    "Chào bạn! Mình là bot mua bán đồ cũ trong chung cư.\n"
+    "- Muốn BÁN: gửi ảnh món đồ kèm mô tả và giá (vd: \"Laptop Dell còn tốt 5tr\").\n"
+    "- Muốn MUA: nhắn thẳng, vd \"tìm laptop\" hoặc \"có ai bán xe đạp không\".\n"
+    "- Xem tin: \"xem tin 13\". Hỏi người bán: \"hỏi 13 còn không bạn?\"."
+)
+DRAFT_REMINDER = 'Bạn vẫn còn bản nháp tin #{lid} chờ xác nhận ("ok" để đăng, "thôi" để bỏ).'
 STATUS_VI = {
     "draft": "nháp",
     "awaiting_confirm": "chờ bạn xác nhận",
@@ -77,6 +84,52 @@ async def handle(inbound: Inbound) -> list[Reply]:
     if name in ("/duyet", "/tuchoi"):
         return _moderate(inbound, name, args)
     return [Reply(chat, HELP_SHORT)]
+
+
+async def handle_natural(inbound: Inbound, draft_id: int | None = None) -> list[Reply]:
+    """Câu tự nhiên không có "/" (vd "tôi muốn tìm laptop"). Không đổi trạng thái hội thoại.
+
+    Đang có bản nháp (`draft_id`): chỉ làm khi câu có ý định RÕ (tìm/xem/hỏi...), kèm nhắc bản nháp;
+    câu mơ hồ → hướng dẫn trả lời bản nháp, tránh hiểu nhầm câu của người bán thành tìm kiếm.
+    """
+    user_id = db.upsert_user(inbound.user_id, inbound.display_name)
+    chat = inbound.chat_id
+    if draft_id is None and intent.draft_action(inbound.text)[0] in ("confirm", "cancel"):
+        return [Reply(chat, posting.MSG_NO_DRAFT)]  # "ok"/"thôi" khi không có nháp
+    it = intent.detect(inbound.text)
+    if draft_id is not None and (not it.explicit or it.kind in ("greet", "unknown", "sell")):
+        return [Reply(chat, posting.MSG_CONFIRM_HELP)]
+    replies = _natural_replies(chat, user_id, it)
+    if draft_id is not None:
+        replies.append(Reply(chat, DRAFT_REMINDER.format(lid=draft_id)))
+    return replies
+
+
+def _natural_replies(chat: str, user_id: int, it: intent.Intent) -> list[Reply]:
+    if it.kind in ("greet", "unknown"):
+        return [Reply(chat, WELCOME)]
+    if it.kind == "thanks":
+        return [Reply(chat, "Không có gì ạ! Cần tìm hay bán gì cứ nhắn mình nhé.")]
+    if it.kind == "help":
+        return [Reply(chat, HELP)]
+    if it.kind == "my_listings":
+        return [Reply(chat, _my_listings(user_id))]
+    if it.kind == "view":
+        return _view(chat, str(it.listing_id))
+    if it.kind == "ask":
+        return _ask(chat, user_id, f"{it.listing_id} {it.query}")
+    if it.kind == "sell":
+        item = f" {it.query}" if it.query else ""
+        return [Reply(chat, f"Để đăng bán{item}, bạn gửi ẢNH món đồ kèm mô tả và giá "
+                            f"(vd: \"{(it.query or 'Laptop Dell').capitalize()} còn tốt 5tr\") nhé.")]
+    # search
+    if not it.query:
+        return [Reply(chat, 'Bạn muốn tìm gì? Ví dụ: "tìm laptop", "có ai bán xe đạp không".')]
+    rows = search.search(it.query)
+    if not rows:
+        return [Reply(chat, f"Chưa có tin nào khớp \"{it.query}\". Bạn thử từ khoá khác, "
+                            "hoặc gửi ảnh nếu muốn bán.")]
+    return [Reply(chat, search.format_results(rows))]
 
 
 def _published(lid: int) -> dict | None:

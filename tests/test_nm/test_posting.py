@@ -7,7 +7,7 @@ import pytest
 
 from src.channels.zalo import Inbound, ZaloClient
 from src.config import Settings
-from src.services import ai, db, dispatcher, posting
+from src.services import ai, commands, db, dispatcher, posting
 from src.services.posting import format_vnd, price_from_caption
 
 CHAT = "chat-1"
@@ -144,7 +144,7 @@ async def test_huy_withdraws(client: ZaloClient, image: str) -> None:
     assert db.get_listing(lid)["status"] == "withdrawn"
     assert db.get_conversation(CHAT)["state"] == "idle"
     # Sau khi huỷ, "ok" không đăng gì.
-    assert await send(client, msg("ok")) == [posting.MSG_HINT]
+    assert await send(client, msg("ok")) == [posting.MSG_NO_DRAFT]
 
 
 async def test_new_photo_replaces_old_draft(client: ZaloClient, image: str) -> None:
@@ -187,7 +187,7 @@ async def test_unknown_text_while_confirming(client: ZaloClient, image: str) -> 
 
 
 async def test_idle_text_hint(client: ZaloClient) -> None:
-    assert await send(client, msg("xin chào")) == [posting.MSG_HINT]
+    assert await send(client, msg("xin chào")) == [commands.WELCOME]
     assert db.get_conversation(CHAT)["state"] == "idle"
 
 
@@ -252,4 +252,4 @@ async def test_send_failure_does_not_raise(client: ZaloClient, monkeypatch: pyte
 
     monkeypatch.setattr(client, "send_text", fail)
     replies = await dispatcher.handle(msg("xin chào"), client)
-    assert [r.text for r in replies] == [posting.MSG_HINT]
+    assert [r.text for r in replies] == [commands.WELCOME]

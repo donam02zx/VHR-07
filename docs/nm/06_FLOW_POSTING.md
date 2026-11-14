@@ -6,10 +6,11 @@ Trạng thái ở `conversations.state`. Cài trong `services/posting.py`. Handl
 | Trạng thái | Sự kiện | Hành động | Trạng thái mới |
 |---|---|---|---|
 | idle | ảnh (±chú thích) | tải ảnh → `draft_listing` + `suggest_price` → tạo listing `awaiting_confirm` → gửi bản nháp | awaiting_confirm |
-| idle | text thường | gợi ý: "Gửi ảnh món đồ để đăng, hoặc /tim <từ khoá>" | idle |
-| awaiting_confirm | `ok` | listing → `pending_moderation` → chạy kiểm duyệt (07) → báo kết quả | idle |
-| awaiting_confirm | `sửa ...` | cập nhật title/giá từ câu của người dùng → gửi bản nháp mới | awaiting_confirm |
-| awaiting_confirm | `huy` | listing → `withdrawn` | idle |
+| idle | text thường | hiểu câu tự nhiên (08 — `services/intent.py`): tìm / muốn bán / xem / hỏi / chào | idle |
+| awaiting_confirm | `ok`, `oke`, `đăng đi`, `ừ`, `đồng ý`... | listing → `pending_moderation` → chạy kiểm duyệt (07) → báo kết quả | idle |
+| awaiting_confirm | `sửa giá`/`giá`/`đổi giá ...`, giá trần có đơn vị (`1tr2`), `sửa tiêu đề`/`đổi tên ...` | cập nhật giá/title → gửi bản nháp mới | awaiting_confirm |
+| awaiting_confirm | `huy`, `hủy`, `thôi`, `bỏ`, `không đăng nữa` | listing → `withdrawn` | idle |
+| awaiting_confirm | câu có ý định rõ (vd "tìm laptop") | làm việc đó + nhắc bản nháp còn chờ; câu mơ hồ → hướng dẫn trả lời bản nháp | awaiting_confirm |
 | awaiting_confirm | ảnh mới | coi như huỷ bản cũ, tạo bản mới | awaiting_confirm |
 | bất kỳ | lệnh `/...` | chuyển sang `commands` (08), không đổi trạng thái | giữ nguyên |
 

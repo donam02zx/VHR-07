@@ -14,10 +14,9 @@ from typing import Any
 
 from src.channels.zalo import Inbound
 from src.config import get_settings
-from src.services import ai, db, moderation
+from src.services import ai, db, intent, moderation
 from src.services.pii import mask_phone
 from src.services.safe_ai import AIUnavailableError, call_ai, check_draft, check_price
-from src.services.text import normalize_text
 from src.services.vnd import parse_vnd
 
 logger = logging.getLogger("nm.posting")
@@ -27,11 +26,14 @@ FetchImage = Callable[[str], Awaitable[bytes]]
 DESCRIPTION_MAX = 1200  # giữ bản nháp < 2000 ký tự
 TITLE_MAX = 120
 
-MSG_HINT = "Gửi ảnh món đồ để đăng, hoặc /tim <từ khoá>."
-MSG_CONFIRM_HELP = 'Mình chưa hiểu. Trả lời "ok" để đăng, "sửa giá 1tr2", "sửa tiêu đề <tên mới>", hoặc "huy" để bỏ.'
+MSG_CONFIRM_HELP = (
+    'Bạn đang có bản nháp chờ xác nhận. Trả lời "ok" để đăng, "giá 1tr2" để đổi giá, '
+    '"đổi tên <tên mới>" để đổi tiêu đề, hoặc "thôi" để bỏ.'
+)
 MSG_IMAGE_FAIL = "Mình không tải được ảnh, bạn gửi lại giúp nhé."
 MSG_AI_BUSY = "Hệ thống soạn tin đang bận, bạn gửi lại ảnh sau ít phút nhé."
-MSG_BAD_PRICE = 'Mình chưa hiểu giá "{raw}". Ví dụ: "sửa giá 800k", "sửa giá 1tr2", "sửa giá 1.200.000".'
+MSG_BAD_PRICE = 'Mình chưa hiểu giá "{raw}". Ví dụ: "giá 800k", "giá 1tr2", "giá 1.200.000".'
+MSG_NO_DRAFT = "Bạn chưa có bản nháp nào. Muốn bán thì gửi ảnh món đồ kèm mô tả và giá nhé."
 MSG_BAD_TITLE = "Tiêu đề cần từ 1 đến 120 ký tự."
 MSG_LOST = "Không tìm thấy bản nháp, bạn gửi lại ảnh để đăng mới nhé."
 
@@ -81,7 +83,7 @@ def draft_text(listing: dict[str, Any], price_note: str = "") -> str:
     if listing.get("price_low") and listing.get("price_high"):
         lines.append(f"Giá gợi ý: {format_vnd(listing['price_low'])} – {format_vnd(listing['price_high'])}")
     lines.append(f"Giá đăng: {format_vnd(listing['price_vnd'])}{price_note}")
-    lines.append('Trả lời: "ok" để đăng, "sửa giá 1tr2" để đổi, "huy" để bỏ.')
+    lines.append('Trả lời: "ok" để đăng, "giá 1tr2" để đổi giá, "đổi tên ..." để đổi tiêu đề, "thôi" để bỏ.')
     return "\n".join(lines)
 
 
@@ -148,38 +150,36 @@ async def handle_image(inbound: Inbound, fetch_image: FetchImage) -> list[Reply]
     return [Reply(inbound.chat_id, draft_text(db.get_listing(listing_id), note))]
 
 
-async def handle_text(inbound: Inbound) -> list[Reply]:
-    conv = db.get_conversation(inbound.chat_id)
+def current_draft(chat_id: str) -> dict[str, Any] | None:
+    """Bản nháp đang chờ xác nhận của chat; hội thoại trỏ sai thì đưa về idle (có log)."""
+    conv = db.get_conversation(chat_id)
     if conv["state"] != "awaiting_confirm":
-        return [Reply(inbound.chat_id, MSG_HINT)]
+        return None
     listing = db.get_listing(conv["listing_id"]) if conv["listing_id"] else None
     if listing is None or listing["status"] != "awaiting_confirm":
-        logger.warning("conversation %s trỏ tới tin không hợp lệ: %s", inbound.chat_id, conv["listing_id"])
-        db.set_conversation(inbound.chat_id, "idle")
-        return [Reply(inbound.chat_id, MSG_LOST)]
+        logger.warning("conversation %s trỏ tới tin không hợp lệ: %s", chat_id, conv["listing_id"])
+        db.set_conversation(chat_id, "idle")
+        return None
+    return listing
 
-    norm = normalize_text(inbound.text)
-    if norm == "ok":
+
+async def handle_draft_text(inbound: Inbound, listing: dict[str, Any]) -> list[Reply] | None:
+    """Câu trả lời cho bản nháp ("ok", "thôi", "giá 1tr2", "đổi tên ..."). None = không phải lệnh nháp."""
+    action, rest = intent.draft_action(inbound.text)
+    if action == "confirm":
         return await _confirm(inbound.chat_id, listing)
-    if norm == "huy":
+    if action == "cancel":
         _withdraw_current(inbound.chat_id, "người bán huỷ")
         return [Reply(inbound.chat_id, f"Đã huỷ bản nháp tin #{listing['id']}.")]
-    if norm == "sua gia" or norm.startswith("sua gia "):
-        return _edit_price(inbound, listing)
-    if norm == "sua tieu de" or norm.startswith("sua tieu de "):
-        return _edit_title(inbound, listing)
-    return [Reply(inbound.chat_id, MSG_CONFIRM_HELP)]
+    if action == "price":
+        return _edit_price(inbound, listing, rest)
+    if action == "title":
+        return _edit_title(inbound, listing, rest)
+    return None
 
 
 # ---------------------------------------------------------------- nội bộ
-def _strip_prefix_words(text: str, n_words: int) -> str:
-    """Bỏ n từ đầu của câu gốc (giữ dấu phần còn lại): "sửa tiêu đề Xe đẹp" → "Xe đẹp"."""
-    parts = text.strip().split(maxsplit=n_words)
-    return parts[n_words].strip() if len(parts) > n_words else ""
-
-
-def _edit_price(inbound: Inbound, listing: dict[str, Any]) -> list[Reply]:
-    raw = _strip_prefix_words(inbound.text, 2)
+def _edit_price(inbound: Inbound, listing: dict[str, Any], raw: str) -> list[Reply]:
     value = parse_vnd(raw) if raw else None
     if value is None:
         return [Reply(inbound.chat_id, MSG_BAD_PRICE.format(raw=raw))]
@@ -188,8 +188,7 @@ def _edit_price(inbound: Inbound, listing: dict[str, Any]) -> list[Reply]:
     return [Reply(inbound.chat_id, draft_text(db.get_listing(listing["id"])))]
 
 
-def _edit_title(inbound: Inbound, listing: dict[str, Any]) -> list[Reply]:
-    title = _strip_prefix_words(inbound.text, 3)
+def _edit_title(inbound: Inbound, listing: dict[str, Any], title: str) -> list[Reply]:
     if not 0 < len(title) <= TITLE_MAX:
         return [Reply(inbound.chat_id, MSG_BAD_TITLE)]
     db.update_listing_fields(listing["id"], title=title)
