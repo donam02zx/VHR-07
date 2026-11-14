@@ -7,7 +7,7 @@ Giữ nguyên số thứ tự. Mỗi lượt chỉ làm MỘT task rồi báo c�
   Làm: thêm vào `Settings`: `zalo_bot_token`, `channel_mode` ("sim"|"zalo", mặc định "sim"), `zalo_group_chat_id` (rỗng), `mod_publish_below=0.3`, `mod_reject_from=0.8`, `console_token`, `nm_db_path="data/app.db"`. Cập nhật `.env.example`. Tạo thư mục và `__init__.py` theo 02.
   Xong khi: `make lint` và `pytest` xanh; `from src.config import get_settings` đọc được trường mới.
 
-- [ ] **T02 — Cơ sở dữ liệu** — Đọc: 03, 09
+- [x] **T02 — Cơ sở dữ liệu** — Đọc: 03, 09
   Làm: `services/db.py` đủ bảng + `init_db()` + hàm: `upsert_user`, `create_listing`, `get_listing`, `set_status(from,to)`, `update_listing_fields`, conversation get/set, `try_mark_event(event_key)->bool`, `add_audit`, review queue (create/list/decide), `search_candidates`.
   Xong khi: test tạo tin, chuyển trạng thái hợp lệ OK / sai bị từ chối, `try_mark_event` lần 2 trả False.
 

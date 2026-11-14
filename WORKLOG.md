@@ -33,4 +33,5 @@
 | Member | Task | Status | Output | Time |
 |--------|------|--------|--------|------|
 | Claude Code | NM T01 — cấu hình Settings + .env.example + khung thư mục | ✅ Done | src/config.py, tests/test_nm/test_config_nm.py | 0.3h |
+| Claude Code | NM T02 — services/db.py: schema SQLite, máy trạng thái, hàng chờ duyệt | ✅ Done | src/services/db.py, tests/test_nm/test_db.py (30 test) | 0.5h |
 
