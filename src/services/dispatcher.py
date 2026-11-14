@@ -2,13 +2,17 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 
 from src.channels.zalo import Inbound, ZaloClient
-from src.services import commands, posting
+from src.config import get_settings
+from src.services import agent, commands, posting
 from src.services.posting import Reply
 
 logger = logging.getLogger("nm.dispatcher")
+
+AGENT_TIMEOUT_S = 40.0  # nhiều bước gọi LLM; quá giờ → luật từ khoá
 
 
 def classify(inbound: Inbound) -> str:
@@ -22,15 +26,24 @@ def classify(inbound: Inbound) -> str:
 
 async def route(inbound: Inbound, client: ZaloClient) -> list[Reply]:
     kind = classify(inbound)
+    if kind != "text":
+        agent.clear_pending(inbound.chat_id)
     if kind == "image":
         return await posting.handle_image(inbound, client.download_image)
     if kind == "command":
         return await commands.handle(inbound)
+    if pending := agent.take_pending(inbound.chat_id, inbound.text):
+        return agent.resolve_pending(inbound, *pending)
     draft = posting.current_draft(inbound.chat_id)
     if draft is not None:
         replies = await posting.handle_draft_text(inbound, draft)
         if replies is not None:
             return replies
+    elif get_settings().nm_agent_enabled:
+        try:
+            return await asyncio.wait_for(agent.run(inbound), AGENT_TIMEOUT_S)
+        except Exception as exc:  # agent là lớp "thông minh hơn"; hỏng thì luật từ khoá vẫn trả lời được
+            logger.warning("agent lỗi event=%s (%s) → dùng luật từ khoá", inbound.event_key, type(exc).__name__)
     return await commands.handle_natural(inbound, draft["id"] if draft else None)
 
 

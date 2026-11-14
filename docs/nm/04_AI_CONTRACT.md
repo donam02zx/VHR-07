@@ -23,6 +23,16 @@ def search_semantic(query: str, k: int = 5) -> list[int]:
 ```
 Tất cả đồng bộ (sync) và PHẢI trả đúng dạng trên. Gọi từ code async bằng `asyncio.to_thread(...)`.
 
+## Bản thật `ai_gemini.py` + agent (2026-11-14, người dùng giao làm thay nhóm AI)
+- `ai.py` chọn bản theo `.env`: `NM_AI_MODE=stub` (mặc định) | `gemini`. Nơi gọi KHÔNG đổi; chữ ký 4 hàm giữ nguyên.
+- `ai_gemini.py`: Gemini (`NM_MODEL` đọc ảnh, `NM_MODEL_FAST` cho kiểm duyệt/tìm ngữ nghĩa), structured output Pydantic,
+  prompt ở `prompts/nm_draft_listing.md`, `nm_suggest_price.md`, `nm_moderate.md`, `nm_search_semantic.md`.
+  `moderate`: điểm = max(luật từ khoá lừa đảo, điểm mô hình); luật hàng cấm vẫn chạy trước ở `services/moderation.py`.
+- Agent `services/agent.py` (`NM_AGENT_ENABLED=true`): Gemini gọi công cụ (tìm có lọc giá, xem tin, tin của tôi,
+  hỏi người bán, săn tin), tối đa `NM_AGENT_MAX_STEPS` bước, nhớ 4 lượt gần nhất. Hỏi người bán = HITL: chỉ gửi khi người
+  dùng gõ "gửi". Agent lỗi/quá giờ/quá bước → luật từ khoá (`commands.handle_natural`), có log. Prompt: `nm_agent_system.md`.
+- Không có `GOOGLE_API_KEY` mà bật gemini/agent → cấu hình báo lỗi ngay khi khởi động.
+
 ## Bản giả `ai_stub.py` (SW viết, hành vi xác định để demo ổn định)
 - `draft_listing`: dựa vào `caption` — có "xe đạp" → title "Xe đạp thể thao đã qua sử dụng", category "Thể thao", condition "Cũ 80%"; không có thì title = 60 ký tự đầu caption.
 - `suggest_price`: theo `category` (bảng cố định nhỏ), ví dụ Thể thao 800000–1500000.

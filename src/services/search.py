@@ -23,15 +23,34 @@ def tokenize(query: str) -> list[str]:
     return list(dict.fromkeys(normalize_text(query).split()))
 
 
-def search(query: str, limit: int = MAX_RESULTS) -> list[dict[str, Any]]:
-    """Tin đã đăng khớp ≥ 1 từ; xếp theo số từ khớp, rồi mới nhất."""
+def in_price_range(price: int | None, min_price: int | None, max_price: int | None) -> bool:
+    if min_price is None and max_price is None:
+        return True
+    if price is None:
+        return False
+    return (min_price is None or price >= min_price) and (max_price is None or price <= max_price)
+
+
+def match_count(row: dict[str, Any], words: list[str]) -> int:
+    haystack = normalize_text(f"{row.get('title') or ''} {row.get('description') or ''}")
+    return sum(1 for w in words if w in haystack)
+
+
+def search(
+    query: str, limit: int = MAX_RESULTS, min_price: int | None = None, max_price: int | None = None
+) -> list[dict[str, Any]]:
+    """Tin đã đăng khớp ≥ 1 từ (và trong khoảng giá nếu có); xếp theo số từ khớp, rồi mới nhất.
+
+    Query rỗng nhưng có khoảng giá → mọi tin trong khoảng giá ("đồ dưới 500k").
+    """
     words = tokenize(query)
-    if not words:
+    if not words and min_price is None and max_price is None:
         return []
     scored: list[tuple[int, dict[str, Any]]] = []
     for row in db.search_candidates(CANDIDATE_LIMIT):  # đã sắp mới nhất trước
-        haystack = normalize_text(f"{row['title'] or ''} {row['description'] or ''}")
-        hits = sum(1 for w in words if w in haystack)
+        if not in_price_range(row["price_vnd"], min_price, max_price):
+            continue
+        hits = match_count(row, words) if words else 1
         if hits:
             scored.append((hits, row))
     scored.sort(key=lambda t: t[0], reverse=True)  # sort ổn định → giữ thứ tự mới nhất khi bằng điểm

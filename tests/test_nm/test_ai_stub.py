@@ -23,11 +23,10 @@ def _check_moderation_shape(m: dict) -> None:
     assert isinstance(m["reason"], str) and m["reason"]
 
 
-def test_ai_module_reexports_stub() -> None:
-    assert ai.draft_listing is ai_stub.draft_listing
-    assert ai.suggest_price is ai_stub.suggest_price
-    assert ai.moderate is ai_stub.moderate
-    assert ai.search_semantic is ai_stub.search_semantic
+def test_ai_module_uses_stub_by_default() -> None:
+    assert ai.mode() == "stub"
+    assert ai._impl() is ai_stub
+    assert ai.draft_listing(None, "xe đạp") == ai_stub.draft_listing(None, "xe đạp")
 
 
 def test_bicycle_caption() -> None:

@@ -60,6 +60,10 @@ Giữ nguyên số thứ tự. Mỗi lượt chỉ làm MỘT task rồi báo c�
   Làm: `services/intent.py` (luật từ khoá): tìm / muốn bán / xem / hỏi / chào / cảm ơn; bản nháp hiểu "oke", "đăng đi", "thôi", "giá 1tr2", "1tr2", "đổi tên ...".
   Xong khi: test bảng ví dụ (có/không dấu, "bán/bạn/bàn"), đang nháp mà hỏi tìm thì vẫn giữ nháp + nhắc.
 
+- [ ] **T12c — Phần AI thật (Gemini) + agent + săn tin (người dùng giao, nhóm AI vắng)** — Đọc: 04, 08
+  Làm: `ai_gemini.py` (4 hàm), `ai.py` chọn theo `NM_AI_MODE`, `agent.py` (công cụ + HITL + quay về luật), săn tin, lọc giá.
+  Xong khi: test với LLM giả xanh (đã xong); CHỜ `GOOGLE_API_KEY` để thử Gemini thật (chọn model, soạn tin từ ảnh, agent) rồi mới tick.
+
 - [ ] **T13 — Dọn và tài liệu** — Đọc: 09
   Làm: cập nhật `PROJECT_CONTEXT.md`, `README.md` (cách chạy), `docs/architecture_diagram.md` (sơ đồ ở 02), `WORKLOG.md`. `make lint` và `pytest` xanh.
 

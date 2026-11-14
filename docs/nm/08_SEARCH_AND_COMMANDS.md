@@ -22,6 +22,13 @@ Bỏ dấu thì "bán/bạn/bàn" trùng nhau → luật mơ hồ kiểm trên c
 | `/hoi <id> <câu hỏi>` | người mua hỏi người bán qua bot; bot gửi người bán "Có người hỏi tin #id — mã hỏi N" |
 | `/tl <mã hỏi> <trả lời>` | chỉ người bán của tin; bot chuyển về đúng người mua của luồng đó |
 
+### Lọc giá và săn tin (`intent.parse_price_range`, `services/watches.py`)
+- Câu tìm hiểu khoảng giá: "dưới 5 triệu", "từ 1 đến 2tr", "2-3tr", "trên 500k", "không quá 300k".
+- Săn tin: "báo mình khi có laptop dưới 5 triệu", "có tủ lạnh thì nhắn em", `/santin laptop dưới 5tr`.
+  Xem: `/santin` hoặc "mình đang săn gì"; bỏ: `/huysan <mã>`. Tối đa 5 yêu cầu/người.
+- Khi một tin chuyển `published` (tự động hay người duyệt), `posting.publish_replies` nhắn mọi người đang săn khớp
+  ĐỦ từ khoá + khoảng giá (không nhắn chính người bán). Bảng `watches` (03).
+
 ### Chuyển tin ẩn danh (`/hoi` – `/tl`)
 Cả hai bên chỉ thấy bot: không có tên thật, Zalo ID hay SĐT (nội dung chuyển đi qua `mask_phone`).
 DB chỉ lưu luồng (`relay_threads`), không lưu nội dung. Người mua chỉ thấy "đã chuyển" khi gửi tới người bán thành công;

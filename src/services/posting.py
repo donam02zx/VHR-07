@@ -106,6 +106,9 @@ def publish_replies(listing: dict[str, Any], seller_chat_id: str) -> list[Reply]
     group = get_settings().zalo_group_chat_id
     if group:
         replies.append(Reply(group, public_text(listing)))
+    from src.services import watches  # import muộn: watches → search → posting (vòng import)
+
+    replies.extend(watches.notify_for(listing))
     return replies
 
 

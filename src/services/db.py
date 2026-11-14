@@ -86,6 +86,15 @@ CREATE TABLE IF NOT EXISTS review_queue(
   created_at TEXT NOT NULL, decided_at TEXT
 );
 CREATE TABLE IF NOT EXISTS processed_events(event_key TEXT PRIMARY KEY, created_at TEXT NOT NULL);
+-- Săn tin: bot tự nhắn khi có tin mới khớp (từ khoá + khoảng giá).
+CREATE TABLE IF NOT EXISTS watches(
+  id INTEGER PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(id),
+  query TEXT NOT NULL,
+  min_price INTEGER, max_price INTEGER,
+  active INTEGER NOT NULL DEFAULT 1,
+  created_at TEXT NOT NULL
+);
 -- Chuyển tin ẩn danh người mua <-> người bán qua bot (/hoi, /tl). Mỗi người mua một luồng mỗi tin.
 CREATE TABLE IF NOT EXISTS relay_threads(
   id INTEGER PRIMARY KEY,
@@ -444,3 +453,32 @@ def get_thread(thread_id: int) -> dict[str, Any] | None:
 def touch_thread(thread_id: int) -> None:
     with connect() as conn:
         conn.execute("UPDATE relay_threads SET last_at=? WHERE id=?", (now_iso(), thread_id))
+
+
+# ---------------------------------------------------------------- săn tin (watches)
+def create_watch(user_id: int, query: str, min_price: int | None, max_price: int | None) -> int:
+    with connect() as conn:
+        cur = conn.execute(
+            "INSERT INTO watches(user_id, query, min_price, max_price, created_at) VALUES(?,?,?,?,?)",
+            (user_id, query, min_price, max_price, now_iso()),
+        )
+        return int(cur.lastrowid)
+
+
+def list_watches(user_id: int | None = None) -> list[dict[str, Any]]:
+    """Yêu cầu săn tin đang bật (của một người, hoặc tất cả) kèm zalo id người đặt."""
+    sql = (
+        "SELECT w.*, u.zalo_user_id FROM watches w JOIN users u ON u.id=w.user_id WHERE w.active=1"
+        + (" AND w.user_id=?" if user_id is not None else "")
+        + " ORDER BY w.id"
+    )
+    with connect() as conn:
+        rows = conn.execute(sql, (user_id,) if user_id is not None else ()).fetchall()
+    return [dict(r) for r in rows]
+
+
+def cancel_watch(watch_id: int, user_id: int) -> bool:
+    """Tắt yêu cầu săn tin của chính người đó. False nếu không có/không phải của họ."""
+    with connect() as conn:
+        cur = conn.execute("UPDATE watches SET active=0 WHERE id=? AND user_id=? AND active=1", (watch_id, user_id))
+    return cur.rowcount == 1

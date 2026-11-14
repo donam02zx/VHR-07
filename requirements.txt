@@ -11,7 +11,7 @@ langgraph>=1.2.0
 # Chọn provider theo model đội dùng (đủ cả 3 để học viên đổi model không đổi code flow):
 langchain-openai>=1.6.0        # GPT series
 langchain-anthropic>=1.7.0     # Claude series
-# langchain-google-genai>=4.4.0 # Gemini series (uncomment nếu dùng)
+langchain-google-genai>=4.4.0  # Gemini series — NeighborMarket dùng Gemini (agent + soạn tin từ ảnh)
 
 # Database (uncomment as needed)
 # sqlalchemy>=2.0.0

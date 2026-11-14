@@ -51,6 +51,14 @@ class Settings(BaseSettings):
     console_token: str = ""
     nm_db_path: str = "data/app.db"
 
+    # NeighborMarket AI (Gemini). "stub" = bản giả xác định (mặc định, chạy không cần key).
+    google_api_key: str = ""
+    nm_ai_mode: Literal["stub", "gemini"] = "stub"  # 4 hàm AI (04): soạn tin từ ảnh, giá, kiểm duyệt, tìm ngữ nghĩa
+    nm_agent_enabled: bool = False  # agent LLM gọi công cụ cho câu tự nhiên; lỗi → luật từ khoá
+    nm_model: str = "gemini-2.5-flash"  # đọc ảnh + gọi công cụ
+    nm_model_fast: str = "gemini-2.5-flash-lite"  # kiểm duyệt, tìm ngữ nghĩa (rẻ, nhanh)
+    nm_agent_max_steps: int = Field(default=5, ge=1, le=10)
+
     @model_validator(mode="after")
     def _check_nm(self) -> "Settings":
         """Lỗi tường minh khi cấu hình sai, thay vì chạy với ngưỡng/kênh vô nghĩa."""
@@ -58,6 +66,8 @@ class Settings(BaseSettings):
             raise ValueError("mod_publish_below phải <= mod_reject_from")
         if self.channel_mode == "zalo" and not self.zalo_bot_token:
             raise ValueError("channel_mode='zalo' cần ZALO_BOT_TOKEN")
+        if (self.nm_ai_mode == "gemini" or self.nm_agent_enabled) and not self.google_api_key:
+            raise ValueError("NM_AI_MODE=gemini / NM_AGENT_ENABLED=true cần GOOGLE_API_KEY")
         return self
 
 

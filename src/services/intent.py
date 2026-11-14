@@ -16,13 +16,18 @@ from typing import Literal
 from src.services.text import normalize_text
 from src.services.vnd import parse_vnd
 
-IntentKind = Literal["greet", "thanks", "help", "my_listings", "view", "ask", "search", "sell", "unknown"]
+IntentKind = Literal[
+    "greet", "thanks", "help", "my_listings", "view", "ask", "search", "sell", "watch", "my_watches", "unknown"
+]
 DraftAction = Literal["confirm", "cancel", "price", "title", "none"]
 
 # ---- Từ khoá (sửa ở đây) ----
 GREETINGS = {"xin chao", "chao", "chao ban", "chao bot", "hello", "hi", "hey", "alo", "a lo"}
 THANKS = {"cam on", "cam on ban", "cam on nhe", "cam on nha", "thanks", "thank you", "tks", "thank"}
-HELP_RE = re.compile(r"\b(huong dan|giup|help|lam sao|lam the nao|cach dang|cach dung|dung the nao)\b")
+# "giúp" đứng một mình KHÔNG là xin hướng dẫn ("giúp mình tìm laptop", "săn giúp").
+HELP_RE = re.compile(
+    r"\b(huong dan|help|lam sao|lam the nao|cach dang|cach dung|dung the nao|giup (gi|duoc gi)|lam duoc gi)\b"
+)
 MY_RE = re.compile(r"\b(tin cua (toi|minh|em)|tin (toi|minh|em) (da )?dang|cac tin cua)\b")
 # Khớp ở BẤT KỲ đâu trong câu ("tôi muốn xem tin 13", "cho mình hỏi tin 13 còn không").
 VIEW_RE = re.compile(r"\bxem\s+(?:chi tiet\s+)?(?:tin\s+)?(?:so\s+)?#?(\d+)\b|^(?:tin\s+(?:so\s+)?|#)(\d+)$")
@@ -33,6 +38,20 @@ SELL_RE = re.compile(
 )
 SELL_START_ACCENTED = re.compile(r"^(bán|mình bán|em bán|tôi bán)\s")
 SEARCH_TRIGGER_RE = re.compile(r"\b(tim|kiem|mua|can tim|hoi mua|co .+ khong|con .+ khong)\b")
+# Săn tin: "báo mình khi có laptop dưới 5tr", "săn giúp tủ lạnh", "có xe đạp thì nhắn em".
+WATCH_RE = re.compile(r"\b(san tin|san giup|san ho|theo doi)\b|\b(bao|nhan|nhac)\b.*\b(khi|neu|thi)\b|\bthi (bao|nhan)\b")
+MY_WATCHES_RE = re.compile(r"\b(dang san|tin dang san|danh sach san|cac yeu cau san|san tin cua)\b")
+
+# Khoảng giá trong câu (chữ thường CÓ dấu): "dưới 5 triệu", "từ 1 đến 2tr", "trên 500k".
+_UNIT = r"(?:triệu|trieu|tr|củ|cu|k|nghìn|nghin|ngàn|ngan)"
+_NUM = rf"\d[\d.,]*\s*{_UNIT}?(?:\s*\d{{1,3}}(?!\d))?"
+PRICE_RANGE_RE = re.compile(
+    rf"(?:từ|tu|khoảng|khoang|tầm|tam)?\s*(?P<a>{_NUM})\s*(?:đến|den|tới|toi|-|~)\s*(?P<b>{_NUM})"
+)
+PRICE_MAX_RE = re.compile(
+    rf"(?:dưới|duoi|không quá|khong qua|tối đa|toi da|max|ít hơn|it hon|rẻ hơn|re hon|<=?)\s*(?P<v>{_NUM})"
+)
+PRICE_MIN_RE = re.compile(rf"(?:trên|tren|ít nhất|it nhat|tối thiểu|toi thieu|hơn|>=?)\s*(?P<v>{_NUM})")
 
 # Cụm ý định bỏ trước khi tách từ (để "ban" không dấu trong "co ai ban"/"muon ban" không lọt vào từ khoá).
 INTENT_PHRASES_RE = re.compile(
@@ -40,7 +59,9 @@ INTENT_PHRASES_RE = re.compile(
     r"|\b(?:muốn|muon|cần|can|đang|dang|đăng|dang)\s+(?:bán|ban)\b"
 )
 # Đại từ chỉ bỏ khi đứng ĐẦU câu ("em muốn tìm..."), để giữ "trẻ em", "anh đào"...
-PRONOUNS = {"tôi", "toi", "mình", "minh", "em", "anh", "chị", "chi", "mk", "e", "a"}
+PRONOUNS = {"tôi", "toi", "mình", "minh", "em", "anh", "chị", "chi", "mk", "e", "a", "tui", "tớ", "to"}
+# ...hoặc ngay sau động từ hướng tới người nói ("nhắn em", "báo mình", "giúp tôi").
+_PRONOUN_AFTER = {"báo", "bao", "nhắn", "nhan", "nhắc", "nhac", "giúp", "giup", "cho", "hộ", "ho", "với", "voi"}
 # Từ đệm bỏ đi trước khi tìm. "bạn"/"bán" chỉ bỏ dạng CÓ dấu để giữ "bàn" (bàn học) và "ban" gõ không dấu.
 STOPWORDS = {
     "tôi", "toi", "mình", "minh", "bạn", "bán", "muốn", "muon", "cần", "can",
@@ -51,6 +72,8 @@ STOPWORDS = {
     "mon", "giá", "gia", "rẻ", "re", "hàng", "hang", "còn", "con", "ạ.", "hả", "ha", "gì", "gi",
     "thanh", "lý", "ly", "pass", "lại", "lai", "nhượng", "nhuong", "gấp", "gap", "đăng", "tin",
     "please", "pls", "shop", "nhà", "nha", "mấy", "may", "cũ", "cu",
+    "báo", "bao", "nhắn", "nhan", "nhắc", "nhac", "khi", "nếu", "neu", "thì", "thi", "giúp", "giup",
+    "săn", "san", "theo", "dõi", "doi", "mới", "moi", "lúc", "luc", "hộ", "ho", "tầm", "tam", "khoảng", "khoang",
 }
 
 CONFIRM = {
@@ -68,13 +91,43 @@ TITLE_PREFIXES = ("sua tieu de", "doi tieu de", "tieu de", "doi ten", "sua ten")
 @dataclass(frozen=True)
 class Intent:
     kind: IntentKind
-    query: str = ""  # search: từ khoá đã lọc; sell: tên món (nếu có); ask: câu hỏi
+    query: str = ""  # search/watch: từ khoá đã lọc; sell: tên món (nếu có); ask: câu hỏi
     listing_id: int | None = None
     explicit: bool = True  # False = không có từ khoá ý định, chỉ đoán "tìm" từ nội dung
+    min_price: int | None = None
+    max_price: int | None = None
 
 
 def _lower(text: str) -> str:
     return " ".join(unicodedata.normalize("NFC", text).lower().split())
+
+
+def _price(raw: str, unit_from: str = "") -> int | None:
+    """Giá trong câu; "1" trong "từ 1 đến 2 triệu" mượn đơn vị của vế sau."""
+    value = parse_vnd(raw)
+    if value is None and unit_from:
+        unit = re.search(_UNIT + r"$", unit_from.strip())
+        if unit and re.fullmatch(r"\d[\d.,]*", raw.strip()):
+            value = parse_vnd(raw.strip() + unit.group(0))
+    return value
+
+
+def parse_price_range(text: str) -> tuple[int | None, int | None, str]:
+    """Tách điều kiện giá khỏi câu → (min, max, phần câu còn lại). Không có/không hiểu → (None, None, câu)."""
+    lowered = _lower(text)
+    if m := PRICE_RANGE_RE.search(lowered):
+        b = _price(m["b"])
+        a = _price(m["a"], m["b"])
+        if a is not None and b is not None:
+            lo, hi = sorted((a, b))
+            return lo, hi, lowered[: m.start()] + " " + lowered[m.end():]
+    if m := PRICE_MAX_RE.search(lowered):
+        if (v := _price(m["v"])) is not None:
+            return None, v, lowered[: m.start()] + " " + lowered[m.end():]
+    if m := PRICE_MIN_RE.search(lowered):
+        if (v := _price(m["v"])) is not None:
+            return v, None, lowered[: m.start()] + " " + lowered[m.end():]
+    return None, None, text
 
 
 def keywords(text: str) -> str:
@@ -82,7 +135,8 @@ def keywords(text: str) -> str:
     tokens = re.findall(r"\w+", INTENT_PHRASES_RE.sub(" ", _lower(text)))
     while tokens and tokens[0] in PRONOUNS:
         tokens.pop(0)
-    return " ".join(t for t in tokens if t not in STOPWORDS and len(t) > 1)
+    kept = [t for i, t in enumerate(tokens) if not (t in PRONOUNS and i > 0 and tokens[i - 1] in _PRONOUN_AFTER)]
+    return " ".join(t for t in kept if t not in STOPWORDS and len(t) > 1)
 
 
 def detect(text: str) -> Intent:
@@ -101,17 +155,22 @@ def detect(text: str) -> Intent:
         return Intent("view", listing_id=int(m.group(1) or m.group(2)))
     if MY_RE.search(norm):
         return Intent("my_listings")
+    if MY_WATCHES_RE.search(norm):
+        return Intent("my_watches")
     if HELP_RE.search(norm):
         return Intent("help")
+    lo, hi, rest = parse_price_range(text)
+    if WATCH_RE.search(norm):
+        return Intent("watch", query=keywords(rest), min_price=lo, max_price=hi)
     if BUYER_ASKS_SELLER_RE.search(lowered):
-        return Intent("search", query=keywords(text))
+        return Intent("search", query=keywords(rest), min_price=lo, max_price=hi)
     if SELL_RE.search(norm) or SELL_START_ACCENTED.match(lowered):
-        return Intent("sell", query=keywords(text))
+        return Intent("sell", query=keywords(rest))
     if SEARCH_TRIGGER_RE.search(norm):
-        return Intent("search", query=keywords(text))
-    words = keywords(text)
-    if words:
-        return Intent("search", query=words, explicit=False)
+        return Intent("search", query=keywords(rest), min_price=lo, max_price=hi)
+    words = keywords(rest)
+    if words or lo is not None or hi is not None:
+        return Intent("search", query=words, explicit=False, min_price=lo, max_price=hi)
     return Intent("unknown", explicit=False)
 
 

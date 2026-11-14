@@ -81,6 +81,8 @@ class Poller:
                 logger.warning("get_updates lỗi (%s), thử lại sau %.0fs", type(exc).__name__, backoff)
                 await self._sleep(backoff)
                 continue
+            if backoff is not None:
+                logger.info("get_updates hoạt động lại sau lỗi mạng")
             backoff = None
             for raw in updates:
                 await self.process(raw)

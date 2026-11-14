@@ -6,7 +6,7 @@ import logging
 
 from src.channels.zalo import Inbound
 from src.config import get_settings
-from src.services import db, intent, posting, reviewflow, search
+from src.services import db, intent, posting, reviewflow, search, watches
 from src.services.pii import mask_phone
 from src.services.posting import Reply
 from src.services.text import normalize_text
@@ -20,6 +20,7 @@ HELP = (
     "- /xem <mã tin>: xem chi tiết một tin.\n"
     "- /hoi <mã tin> <câu hỏi>: hỏi người bán (ẩn danh qua bot).\n"
     "- /tl <mã hỏi> <trả lời>: người bán trả lời người hỏi.\n"
+    "- Săn tin: \"báo mình khi có laptop dưới 5 triệu\" (xem: /santin, bỏ: /huysan <mã>).\n"
     "- /tincuatoi: xem tin của bạn.\n"
     "- /rut <mã tin>: rút tin của bạn."
 )
@@ -83,6 +84,17 @@ async def handle(inbound: Inbound) -> list[Reply]:
         return _withdraw(chat, user_id, args)
     if name in ("/duyet", "/tuchoi"):
         return _moderate(inbound, name, args)
+    if name == "/santin":
+        if not args:
+            return [Reply(chat, watches.list_text(user_id))]
+        lo, hi, rest = intent.parse_price_range(args)
+        return [Reply(chat, watches.create(user_id, intent.keywords(rest), lo, hi)[1])]
+    if name == "/huysan":
+        wid = _parse_id(args)
+        if wid is None:
+            return [Reply(chat, "Gõ /huysan <mã săn>. Xem mã: /santin")]
+        ok = db.cancel_watch(wid, user_id)
+        return [Reply(chat, f"Đã bỏ săn tin mã {wid}." if ok else f"Không tìm thấy mã săn {wid} của bạn.")]
     return [Reply(chat, HELP_SHORT)]
 
 
@@ -122,13 +134,18 @@ def _natural_replies(chat: str, user_id: int, it: intent.Intent) -> list[Reply]:
         item = f" {it.query}" if it.query else ""
         return [Reply(chat, f"Để đăng bán{item}, bạn gửi ẢNH món đồ kèm mô tả và giá "
                             f"(vd: \"{(it.query or 'Laptop Dell').capitalize()} còn tốt 5tr\") nhé.")]
+    if it.kind == "watch":
+        return [Reply(chat, watches.create(user_id, it.query, it.min_price, it.max_price)[1])]
+    if it.kind == "my_watches":
+        return [Reply(chat, watches.list_text(user_id))]
     # search
-    if not it.query:
+    if not it.query and it.min_price is None and it.max_price is None:
         return [Reply(chat, 'Bạn muốn tìm gì? Ví dụ: "tìm laptop", "có ai bán xe đạp không".')]
-    rows = search.search(it.query)
+    rows = search.search(it.query, min_price=it.min_price, max_price=it.max_price)
+    what = watches.describe(it.query, it.min_price, it.max_price)
     if not rows:
-        return [Reply(chat, f"Chưa có tin nào khớp \"{it.query}\". Bạn thử từ khoá khác, "
-                            "hoặc gửi ảnh nếu muốn bán.")]
+        return [Reply(chat, f"Chưa có tin nào khớp {what}. Muốn mình báo khi có thì nhắn "
+                            f"\"báo mình khi có {it.query or 'món này'}\" nhé.")]
     return [Reply(chat, search.format_results(rows))]
 
 
