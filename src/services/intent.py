@@ -184,13 +184,44 @@ def draft_action(text: str) -> tuple[DraftAction, str]:
         return "confirm", ""
     if norm in CANCEL:
         return "cancel", ""
-    for prefixes, action in ((TITLE_PREFIXES, "title"), (PRICE_PREFIXES, "price")):
-        for p in prefixes:
-            if norm == p or norm.startswith(p + " "):
-                return action, _drop_words(text, len(p.split()))
+    for p in TITLE_PREFIXES:
+        if norm == p or norm.startswith(p + " "):
+            return "title", _drop_words(text, len(p.split()))
+    for p in PRICE_PREFIXES:
+        if norm == p or norm.startswith(p + " "):
+            rest = _drop_words(text, len(p.split()))
+            # "sửa giá thành 15 triệu" → "15 triệu"; không thấy giá → giữ nguyên để báo "chưa hiểu giá"
+            return "price", find_price(rest, need_unit=False) or rest
     if parse_vnd(text) is not None:
         return "price", text.strip()
+    # Giá nằm giữa câu: "tôi muốn giá 15 triệu", "để 15tr nhé". Có chữ "giá" → nhận cả số trần ≥ 1000;
+    # không có → phải có đơn vị, và bỏ qua câu kể giá đã mua ("mua 2tr năm ngoái").
+    words = set(norm.split())
+    if "gia" in words or "mua" not in words:
+        found = find_price(text, need_unit="gia" not in words)
+        if found:
+            return "price", found
     return "none", ""
+
+
+_PRICE_UNIT_RE = re.compile(r"\d\s*(?:tr|trieu|cu|k|nghin|ngan|d|vnd|dong)\b|\d(?:tr|k)\d")
+
+
+def find_price(text: str, need_unit: bool = True) -> str | None:
+    """Tìm cụm giá đầu tiên trong câu (ưu tiên cụm dài: "1 triệu 5" hơn "1 triệu"). Trả cụm gốc hoặc None."""
+    words = [w.strip(",!?;:") for w in text.split()]
+    words = [w[:-1] if w.endswith(".") and not w[:-1].endswith(".") else w for w in words]
+    for i in range(len(words)):
+        for n in (4, 3, 2, 1):
+            if i + n > len(words):
+                continue
+            frag = " ".join(words[i : i + n])
+            if not frag or parse_vnd(frag) is None:
+                continue
+            if need_unit and not _PRICE_UNIT_RE.search(normalize_text(frag)):
+                continue
+            return frag
+    return None
 
 
 def _drop_words(text: str, n: int) -> str:

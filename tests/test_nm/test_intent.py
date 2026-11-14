@@ -87,6 +87,13 @@ def test_keywords_keeps_accents_drops_fillers() -> None:
         ("1tr2", "price", "1tr2"), ("950k", "price", "950k"),
         ("sửa tiêu đề Xe đạp Giant", "title", "Xe đạp Giant"), ("đổi tên Nồi cơm Sharp", "title", "Nồi cơm Sharp"),
         ("bao nhiêu vậy", "none", ""), ("tìm laptop", "none", ""), ("800", "none", ""),
+        # giá giữa câu (lỗi thật 2026-11-14: "tôi muốn giá 15 triệu" bị bỏ qua, tin đăng giá gợi ý)
+        ("tôi muốn giá 15 triệu", "price", "15 triệu"), ("sửa giá thành 15 triệu", "price", "15 triệu"),
+        ("để giá 15tr nhé", "price", "15tr"), ("mình muốn bán 15tr", "price", "15tr"),
+        ("để giá 1500000 nhé", "price", "1500000"), ("giá 1 triệu 5 nha", "price", "1 triệu 5"),
+        ("bán với giá 15.000.000đ", "price", "15.000.000đ"), ("15tr.", "price", "15tr"),
+        ("mua 2tr năm ngoái", "none", ""), ("bảo hành 12 tháng", "none", ""), ("máy đời 2024", "none", ""),
+        ("đổi tên laptop 15 inch", "title", "laptop 15 inch"), ("giá abc", "price", "abc"),
     ],
 )
 def test_draft_action(text: str, action: str, rest: str) -> None:

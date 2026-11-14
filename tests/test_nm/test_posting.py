@@ -130,6 +130,15 @@ async def test_photo_draft_edit_price_ok_publishes(client: ZaloClient, image: st
     assert actions[:3] == ["draft_created", "edit_price", "confirmed"]
 
 
+async def test_price_mid_sentence_is_applied(client: ZaloClient, image: str) -> None:
+    await send(client, msg("Laptop", image))
+    out = await send(client, msg("tôi muốn giá 15 triệu"))
+    assert "Giá đăng: 15.000.000 đ" in out[0]
+    lid = current_listing()["id"]
+    await send(client, msg("ok"))
+    assert db.get_listing(lid)["price_vnd"] == 15_000_000
+
+
 async def test_caption_price_used(client: ZaloClient, image: str) -> None:
     out = await send(client, msg("Xe đạp 900k", image))
     assert "Giá đăng: 900.000 đ\n" in out[0]
