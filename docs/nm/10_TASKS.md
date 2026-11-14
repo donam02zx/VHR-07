@@ -58,3 +58,4 @@ Giữ nguyên số thứ tự. Mỗi lượt chỉ làm MỘT task rồi báo c�
 ## Câu hỏi mở (ghi vào đây, đừng tự đoán)
 - Repo: https://github.com/donam02zx/VHR-07
 - T03: `parse_vnd("800")` (số trần < 1000, không đơn vị) trả None để bot hỏi lại — đúng ý? `mask_phone` chỉ che di động (03/05/07/08/09), chưa che máy bàn 02x.
+- T05 (2026-11-14): `docs/nm/samples/` chưa có JSON thật (update_text, update_photo, getMe) → T05 dừng, chờ người dùng chạy curl với token.
