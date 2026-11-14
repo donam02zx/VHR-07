@@ -196,6 +196,18 @@ def _withdraw_current(chat_id: str, why: str) -> None:
     db.set_conversation(chat_id, "idle")
 
 
+def reopen_for_fix(chat_id: str, listing_id: int) -> None:
+    """Người duyệt trả về `needs_fix` → tin về `awaiting_confirm`, hội thoại chờ "sửa ..."/"ok".
+
+    Bản nháp khác đang dở của chat bị huỷ (có audit) — mỗi chat chỉ giữ một bản nháp.
+    """
+    _withdraw_current(chat_id, f"mở lại tin #{listing_id} cần sửa")
+    if not db.set_status(listing_id, "needs_fix", "awaiting_confirm"):
+        raise RuntimeError(f"listing {listing_id} không ở needs_fix")
+    db.set_conversation(chat_id, "awaiting_confirm", listing_id)
+    db.add_audit(listing_id, "reopened_for_fix", "")
+
+
 async def _confirm(chat_id: str, listing: dict[str, Any]) -> list[Reply]:
     lid = listing["id"]
     if not db.set_status(lid, "awaiting_confirm", "pending_moderation"):

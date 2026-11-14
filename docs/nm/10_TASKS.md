@@ -32,7 +32,7 @@ Giữ nguyên số thứ tự. Mỗi lượt chỉ làm MỘT task rồi báo c�
   Làm: `services/moderation.py`: luật cứng, `route()`, `process()` nối trạng thái, xử lý lỗi/timeout AI.
   Xong khi: test 3 nhánh + biên 0.29/0.3/0.79/0.8 + AI ném lỗi → `in_review` `ai_unavailable`.
 
-- [ ] **T08 — API duyệt và trang duyệt** — Đọc: 07, 02
+- [x] **T08 — API duyệt và trang duyệt** — Đọc: 07, 02
   Làm: `api/reviews.py`, đăng ký router + mount static trong `main.py`, `static/console.html`. Duyệt xong nhắn người bán qua kênh.
   Xong khi: test API (token sai → 401, quyết định hai lần → 409); mở `/console` thấy hàng chờ.
 
@@ -60,3 +60,4 @@ Giữ nguyên số thứ tự. Mỗi lượt chỉ làm MỘT task rồi báo c�
 - T03: `parse_vnd("800")` (số trần < 1000, không đơn vị) trả None để bot hỏi lại — đúng ý? `mask_phone` chỉ che di động (03/05/07/08/09), chưa che máy bàn 02x.
 - T05: đã có mẫu text/photo thật (getMe.json chưa lưu, dạng getMe đã ghi ở 05). Còn chưa kiểm chứng: timeout getUpdates, sendPhoto (đang NotImplementedError), nhóm (parse_update bỏ qua chat_type khác PRIVATE).
 - T07: giá bất thường (≤0, >1 tỷ, thiếu giá) mình xếp vào nhóm "đưa người duyệt" (điểm tối thiểu 0.3) chứ không từ chối ngay — 07 không nói rõ. Đúng ý?
+- T08: `needs_fix` mở lại tin ngay (về awaiting_confirm, hội thoại chờ sửa/ok); nếu người bán đang có bản nháp khác thì bản đó bị huỷ. Chấp nhận cho demo?

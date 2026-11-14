@@ -1,17 +1,29 @@
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
+from src.api import reviews
 from src.api.routes import router
+from src.channels.zalo import ZaloClient
 from src.config import get_settings
+from src.services import db
+
+STATIC_DIR = Path(__file__).parent / "static"
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     settings = get_settings()
     print(f"Starting {settings.app_name} in {settings.app_env} mode")
+    # NeighborMarket: DB + kênh nhắn tin dùng chung (docs/nm/02).
+    db.init_db()
+    app.state.channel = ZaloClient(settings)
     yield
+    await app.state.channel.aclose()
     print("Shutting down...")
 
 
@@ -32,6 +44,14 @@ app.add_middleware(
 )
 
 app.include_router(router, prefix="/api/v1")
+app.include_router(reviews.router, prefix="/api/v1")
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+
+
+@app.get("/console", include_in_schema=False)
+async def console() -> FileResponse:
+    """Trang duyệt tin (docs/nm/07)."""
+    return FileResponse(STATIC_DIR / "console.html")
 
 
 @app.get("/health")

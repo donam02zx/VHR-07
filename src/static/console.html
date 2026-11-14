@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Duyệt tin NeighborMarket</title>
+<style>
+  :root { --bg:#f7f7f5; --fg:#1d1d1b; --muted:#6b6b66; --line:#ddd; --card:#fff;
+          --ok:#1f7a3a; --bad:#b3261e; --warn:#8a5a00; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#161615; --fg:#ecebe6; --muted:#a3a29b; --line:#333; --card:#201f1d;
+            --ok:#5cc27a; --bad:#ff8a80; --warn:#f0b54a; }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:15px/1.45 system-ui, sans-serif; }
+  main { max-width:1100px; margin:0 auto; padding:16px; }
+  h1 { font-size:20px; margin:0 0 12px; }
+  .bar { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:12px; }
+  input, button { font:inherit; padding:6px 10px; border:1px solid var(--line); border-radius:6px;
+                  background:var(--card); color:var(--fg); }
+  button { cursor:pointer; }
+  button.ok { color:var(--ok); } button.bad { color:var(--bad); } button.warn { color:var(--warn); }
+  #status { color:var(--muted); font-size:13px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:8px; padding:12px;
+          display:grid; grid-template-columns:120px 1fr; gap:12px; margin-bottom:10px; }
+  .card img { width:120px; height:120px; object-fit:cover; border-radius:6px; background:var(--line); }
+  .title { font-weight:600; }
+  .meta { color:var(--muted); font-size:13px; }
+  .reason { margin:6px 0; }
+  .actions { display:flex; gap:6px; flex-wrap:wrap; margin-top:6px; }
+  .empty { color:var(--muted); padding:24px 0; }
+  @media (max-width:520px) { .card { grid-template-columns:1fr; } .card img { width:100%; height:180px; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>Hàng chờ duyệt</h1>
+  <div class="bar">
+    <input id="token" type="password" placeholder="Console token" autocomplete="off">
+    <button id="save">Lưu token</button>
+    <span id="status"></span>
+  </div>
+  <div id="list"></div>
+</main>
+<script>
+const API = "/api/v1/reviews";
+const $ = (id) => document.getElementById(id);
+let token = "";
+try { token = localStorage.getItem("nm_console_token") || ""; } catch (e) {}
+$("token").value = token;
+
+$("save").onclick = () => {
+  token = $("token").value.trim();
+  try { localStorage.setItem("nm_console_token", token); } catch (e) {}
+  load();
+};
+
+function esc(s) {
+  return String(s ?? "").replace(/[&<>"']/g, (c) =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+}
+function vnd(n) { return n == null ? "chưa có giá" : n.toLocaleString("vi-VN") + " đ"; }
+
+async function load() {
+  if (!token) { $("status").textContent = "Nhập token để xem hàng chờ."; return; }
+  try {
+    const r = await fetch(API + "?status=pending", { headers: { "X-Console-Token": token } });
+    if (!r.ok) { $("status").textContent = "Lỗi " + r.status + ": " + ((await r.json()).detail || ""); return; }
+    render(await r.json());
+    $("status").textContent = "Cập nhật " + new Date().toLocaleTimeString("vi-VN");
+  } catch (e) {
+    $("status").textContent = "Không kết nối được máy chủ.";
+  }
+}
+
+function render(items) {
+  if (!items.length) { $("list").innerHTML = '<div class="empty">Không có tin nào chờ duyệt.</div>'; return; }
+  $("list").innerHTML = items.map((it) => `
+    <div class="card">
+      <img src="${esc(it.image_ref)}" alt="" onerror="this.style.visibility='hidden'">
+      <div>
+        <div class="title">#${it.listing_id} · ${esc(it.title)}</div>
+        <div class="meta">${vnd(it.price_vnd)} · điểm ${it.score == null ? "—" : it.score.toFixed(2)} · ${esc(it.created_at)}</div>
+        <div class="reason">Lý do: ${esc(it.reason)}</div>
+        <div class="meta">${esc(it.description)}</div>
+        <div class="actions">
+          <button class="ok" data-id="${it.id}" data-d="approve">Duyệt</button>
+          <button class="bad" data-id="${it.id}" data-d="reject">Từ chối</button>
+          <button class="warn" data-id="${it.id}" data-d="needs_fix">Cần sửa</button>
+        </div>
+      </div>
+    </div>`).join("");
+}
+
+$("list").onclick = async (ev) => {
+  const b = ev.target.closest("button[data-id]");
+  if (!b) return;
+  const d = b.dataset.d;
+  let note = "";
+  if (d !== "approve") {
+    note = prompt(d === "reject" ? "Lý do từ chối (gửi cho người bán):" : "Cần sửa gì?") ;
+    if (note === null) return;
+  }
+  b.disabled = true;
+  const r = await fetch(`${API}/${b.dataset.id}/decide`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-Console-Token": token },
+    body: JSON.stringify({ decision: d, note }),
+  });
+  if (!r.ok) alert("Lỗi " + r.status + ": " + ((await r.json()).detail || ""));
+  load();
+};
+
+load();
+setInterval(load, 5000);
+</script>
+</body>
+</html>
