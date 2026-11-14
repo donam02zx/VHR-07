@@ -63,3 +63,8 @@ out/
 .pytest_cache/
 .ruff_cache/
 .mypy_cache/
+
+# Ảnh tải về khi thử Zalo (09: không commit)
+/*.jpg
+/*.jpeg
+/*.png
